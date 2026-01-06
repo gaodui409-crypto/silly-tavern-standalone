@@ -64,28 +64,37 @@ export interface ApiConfig {
 }
 
 export interface PromptSegment {
+  id?: string;
+  name?: string;
   role: 'system' | 'user' | 'assistant';
   content: string;
   mainSlot?: 'A' | 'B' | '';
   deletable: boolean;
 }
 
+export interface PlotPromptItem {
+  id: string;
+  name: string;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  deletable: boolean;
+}
+
 export interface PlotSettings {
-  mainPrompt: string;
-  systemPrompt: string;
-  finalDirective: string;
+  enabled: boolean;
+  prompts: PlotPromptItem[];
   rateMain: number;
   ratePersonal: number;
   rateErotic: number;
   rateCuckold: number;
-  loopDelay: number;
-  totalDuration: number;
-  maxRetries: number;
-  contextTurnCount: number;
   extractTags: string;
   contextExtractTags: string;
   contextExcludeTags: string;
   minLength: number;
+  contextTurnCount: number;
+  loopDelay: number;
+  totalDuration: number;
+  maxRetries: number;
   quickReplyContent: string;
   loopTags: string;
 }
