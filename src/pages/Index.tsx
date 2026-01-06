@@ -1,12 +1,40 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { TableEditor } from '@/components/database/TableEditor';
+import { ApiSettings } from '@/components/settings/ApiSettings';
+import { PromptSettings } from '@/components/settings/PromptSettings';
+import { ImportPanel } from '@/components/import/ImportPanel';
+import { PlotPanel } from '@/components/plot/PlotPanel';
+import { MergePanel } from '@/components/merge/MergePanel';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState('database');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'database':
+        return <TableEditor />;
+      case 'settings':
+        return <ApiSettings />;
+      case 'prompts':
+        return <PromptSettings />;
+      case 'import':
+        return <ImportPanel />;
+      case 'plot':
+        return <PlotPanel />;
+      case 'merge':
+        return <MergePanel />;
+      default:
+        return <TableEditor />;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="h-screen flex bg-background">
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {renderContent()}
+      </main>
     </div>
   );
 };
