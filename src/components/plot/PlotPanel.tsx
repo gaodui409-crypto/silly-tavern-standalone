@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { 
   Sparkles, 
   Play, 
@@ -7,9 +6,8 @@ import {
   RotateCcw,
   Settings2,
   Timer,
-  Hash,
-  MessageSquare,
   Tag,
+  MessageSquare,
   Save
 } from 'lucide-react';
 import { useDatabaseStore } from '@/stores/databaseStore';
@@ -19,10 +17,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import type { PlotPromptItem } from '@/types/database';
 
 export function PlotPanel() {
   const { settings, setSettings } = useDatabaseStore();
@@ -30,6 +28,20 @@ export function PlotPanel() {
   const [loopCount, setLoopCount] = useState(0);
   
   const plotSettings = settings.plotSettings;
+  const prompts = plotSettings.prompts || [];
+
+  const getPromptById = (id: string): PlotPromptItem | undefined => {
+    return prompts.find(p => p.id === id);
+  };
+
+  const updatePromptContent = (id: string, content: string) => {
+    const newPrompts = prompts.map(p => 
+      p.id === id ? { ...p, content } : p
+    );
+    setSettings({
+      plotSettings: { ...plotSettings, prompts: newPrompts }
+    });
+  };
 
   const updatePlotSettings = (updates: Partial<typeof plotSettings>) => {
     setSettings({
@@ -50,6 +62,10 @@ export function PlotPanel() {
   const handleSave = () => {
     toast.success('剧情设置已保存');
   };
+
+  const mainPrompt = getPromptById('mainPrompt');
+  const systemPrompt = getPromptById('systemPrompt');
+  const finalDirective = getPromptById('finalSystemDirective');
 
   return (
     <div className="flex-1 p-6 overflow-auto">
@@ -80,34 +96,34 @@ export function PlotPanel() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label>主系统提示词</Label>
+                  <Label>{mainPrompt?.name || '主系统提示词'}</Label>
                   <Textarea
-                    value={plotSettings.mainPrompt}
-                    onChange={(e) => updatePlotSettings({ mainPrompt: e.target.value })}
+                    value={mainPrompt?.content || ''}
+                    onChange={(e) => updatePromptContent('mainPrompt', e.target.value)}
                     placeholder="输入主系统提示词，将替换数据库的主提示词部分"
-                    className="min-h-[100px]"
+                    className="min-h-[150px] font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground">作为系统级别的核心指令</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>拦截任务详细指令</Label>
+                  <Label>{systemPrompt?.name || '拦截任务详细指令'}</Label>
                   <Textarea
-                    value={plotSettings.systemPrompt}
-                    onChange={(e) => updatePlotSettings({ systemPrompt: e.target.value })}
+                    value={systemPrompt?.content || ''}
+                    onChange={(e) => updatePromptContent('systemPrompt', e.target.value)}
                     placeholder="输入拦截任务详细指令"
-                    className="min-h-[100px]"
+                    className="min-h-[150px] font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground">用于详细描述剧情规划任务</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>最终注入指令</Label>
+                  <Label>{finalDirective?.name || '最终注入指令'}</Label>
                   <Textarea
-                    value={plotSettings.finalDirective}
-                    onChange={(e) => updatePlotSettings({ finalDirective: e.target.value })}
+                    value={finalDirective?.content || ''}
+                    onChange={(e) => updatePromptContent('finalSystemDirective', e.target.value)}
                     placeholder="输入最终注入指令"
-                    className="min-h-[100px]"
+                    className="min-h-[100px] font-mono text-sm"
                   />
                   <p className="text-xs text-muted-foreground">注入给主AI的最终指令</p>
                 </div>
