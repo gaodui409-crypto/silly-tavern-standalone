@@ -61,6 +61,7 @@ export interface ApiConfig {
   useMainApi: boolean;
   maxTokens: number;
   temperature: number;
+  corsProxy?: string;
 }
 
 export interface PromptSegment {

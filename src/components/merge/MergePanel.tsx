@@ -117,12 +117,17 @@ export function MergePanel() {
     const apiUrl = settings.apiConfig.url || TEST_API_URL;
     const apiKey = settings.apiConfig.apiKey || TEST_API_KEY;
     const model = settings.apiConfig.model || TEST_MODEL;
+    const corsProxy = settings.apiConfig.corsProxy || 'https://corsproxy.io/?';
 
     const promptTemplate = mergeSettings.promptTemplate || DEFAULT_SUMMARY_PROMPT;
     const finalPrompt = promptTemplate.replace('$CONTENT', content);
 
-    const requestUrl = `${apiUrl}/chat/completions`;
-    console.log(`[Summary API] 第${volumeIndex}卷 - 请求URL:`, requestUrl);
+    const baseUrl = `${apiUrl}/chat/completions`;
+    const requestUrl = corsProxy ? `${corsProxy}${encodeURIComponent(baseUrl)}` : baseUrl;
+    
+    console.log(`[Summary API] 第${volumeIndex}卷 - 原始URL:`, baseUrl);
+    console.log(`[Summary API] 第${volumeIndex}卷 - CORS代理:`, corsProxy || '无');
+    console.log(`[Summary API] 第${volumeIndex}卷 - 最终URL:`, requestUrl);
     console.log(`[Summary API] 第${volumeIndex}卷 - 使用模型:`, model);
     console.log(`[Summary API] 第${volumeIndex}卷 - 内容长度:`, content.length);
 

@@ -300,6 +300,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     useMainApi: true,
     maxTokens: 60000,
     temperature: 0.9,
+    corsProxy: 'https://corsproxy.io/?',
   },
   apiMode: 'custom',
   tavernProfile: '',

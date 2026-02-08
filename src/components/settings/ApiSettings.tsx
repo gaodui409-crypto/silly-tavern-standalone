@@ -25,6 +25,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// CORS代理列表
+const CORS_PROXIES = [
+  { name: '代理1 (corsproxy.io)', url: 'https://corsproxy.io/?' },
+  { name: '代理2 (allorigins)', url: 'https://api.allorigins.win/raw?url=' },
+  { name: '无代理 (直连)', url: '' }
+];
+
 // 内置测试API配置
 const TEST_API_PRESETS = {
   test: {
@@ -43,6 +50,9 @@ export function ApiSettings() {
   const [useBuiltinApi, setUseBuiltinApi] = useState(
     settings.apiConfig.url === TEST_API_PRESETS.test.url
   );
+  const [selectedProxy, setSelectedProxy] = useState(
+    settings.apiConfig.corsProxy || CORS_PROXIES[0].url
+  );
 
   const apiConfig = settings.apiConfig;
 
@@ -56,7 +66,8 @@ export function ApiSettings() {
           url: preset.url,
           apiKey: preset.apiKey,
           model: preset.models[0],
-          useMainApi: false
+          useMainApi: false,
+          corsProxy: selectedProxy
         }
       });
       setModels(preset.models);
@@ -85,8 +96,14 @@ export function ApiSettings() {
     setIsLoading(true);
     setConnectionStatus('idle');
 
-    const testUrl = `${apiConfig.url}/chat/completions`;
-    console.log('[API Test] 开始测试连接:', testUrl);
+    const baseUrl = `${apiConfig.url}/chat/completions`;
+    const corsProxy = apiConfig.corsProxy || selectedProxy;
+    const testUrl = corsProxy ? `${corsProxy}${encodeURIComponent(baseUrl)}` : baseUrl;
+    
+    console.log('[API Test] 开始测试连接');
+    console.log('[API Test] 原始URL:', baseUrl);
+    console.log('[API Test] CORS代理:', corsProxy || '无');
+    console.log('[API Test] 最终URL:', testUrl);
     console.log('[API Test] 使用模型:', apiConfig.model || 'moonshotai/kimi-k2.5');
 
     try {
@@ -212,6 +229,37 @@ export function ApiSettings() {
                       ) : null}
                       检测API连接
                     </Button>
+                    
+                    {/* CORS Proxy Selection */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        CORS代理
+                      </Label>
+                      <Select
+                        value={selectedProxy}
+                        onValueChange={(value) => {
+                          setSelectedProxy(value);
+                          setSettings({
+                            apiConfig: { ...apiConfig, corsProxy: value }
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择CORS代理" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CORS_PROXIES.map((proxy) => (
+                            <SelectItem key={proxy.url} value={proxy.url}>
+                              {proxy.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        通过代理服务绕过浏览器CORS限制
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>
