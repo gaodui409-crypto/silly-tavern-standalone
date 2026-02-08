@@ -630,6 +630,7 @@ interface DatabaseState {
   settings: AppSettings;
   globalMeta: GlobalMeta;
   profiles: Record<string, IsolationProfile>;
+  importChunks: string[];
   
   // UI 状态
   currentSheetKey: string | null;
@@ -660,6 +661,7 @@ interface DatabaseState {
   
   setIsUpdating: (value: boolean) => void;
   setUpdateProgress: (value: number) => void;
+  setImportChunks: (chunks: string[]) => void;
 }
 
 export const useDatabaseStore = create<DatabaseState>()(
@@ -673,6 +675,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         isolationCodeList: [],
       },
       profiles: {},
+      importChunks: [],
       currentSheetKey: 'sheet_global',
       isEditing: false,
       isUpdating: false,
@@ -923,6 +926,7 @@ export const useDatabaseStore = create<DatabaseState>()(
 
       setIsUpdating: (value) => set({ isUpdating: value }),
       setUpdateProgress: (value) => set({ updateProgress: value }),
+      setImportChunks: (chunks) => set({ importChunks: chunks }),
     }),
     {
       name: 'tavern-db-storage',
