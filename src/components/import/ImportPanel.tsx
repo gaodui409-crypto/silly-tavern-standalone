@@ -10,7 +10,8 @@ import {
   FileText,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  BookOpen
 } from 'lucide-react';
 import { useDatabaseStore } from '@/stores/databaseStore';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import type { ImportChunk, ImportStatus } from '@/types/database';
+import { SAMPLE_NOVEL, SAMPLE_CHARACTERS } from '@/data/sampleNovel';
 
 export function ImportPanel() {
   const { settings, setSettings, database } = useDatabaseStore();
@@ -31,10 +33,29 @@ export function ImportPanel() {
   const [status, setStatus] = useState<ImportStatus | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [previewContent, setPreviewContent] = useState<string>('');
 
   const sortedSheets = Object.entries(database)
     .map(([key, sheet]) => ({ key, ...sheet }))
     .sort((a, b) => (a.orderNo ?? 0) - (b.orderNo ?? 0));
+
+  const handleLoadSample = () => {
+    const content = SAMPLE_NOVEL;
+    const splitSize = settings.importSplitSize || 10000;
+    const newChunks: ImportChunk[] = [];
+    
+    for (let i = 0; i < content.length; i += splitSize) {
+      newChunks.push({
+        content: content.substring(i, i + splitSize),
+        index: newChunks.length
+      });
+    }
+
+    setChunks(newChunks);
+    setStatus({ total: newChunks.length, currentIndex: 0 });
+    setPreviewContent(content.substring(0, 500) + '...');
+    toast.success(`示例小说已加载（${content.length} 字），拆分为 ${newChunks.length} 个部分`);
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,6 +123,7 @@ export function ImportPanel() {
     setChunks([]);
     setStatus(null);
     setIsProcessing(false);
+    setPreviewContent('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -189,6 +211,14 @@ export function ImportPanel() {
                   选择文件
                 </Button>
                 <Button 
+                  onClick={handleLoadSample}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  加载示例
+                </Button>
+                <Button 
                   onClick={handleClear}
                   variant="outline"
                   disabled={chunks.length === 0}
@@ -203,10 +233,19 @@ export function ImportPanel() {
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="w-4 h-4 text-primary" />
                     <span className="font-medium">文件已加载</span>
+                    <Badge variant="secondary" className="ml-auto">
+                      {chunks.reduce((acc, c) => acc + c.content.length, 0).toLocaleString()} 字
+                    </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-3">
                     已拆分为 <span className="text-primary font-medium">{chunks.length}</span> 个分块
                   </p>
+                  {previewContent && (
+                    <div className="p-3 rounded bg-background/50 border border-border/30">
+                      <p className="text-xs text-muted-foreground mb-1">内容预览：</p>
+                      <p className="text-sm font-mono whitespace-pre-wrap line-clamp-4">{previewContent}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
