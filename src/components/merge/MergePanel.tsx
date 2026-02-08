@@ -108,6 +108,44 @@ export function MergePanel() {
     });
   };
 
+  // 内置测试API配置
+  const TEST_API_URL = 'https://inference.canopywave.io/v1';
+  const TEST_API_KEY = '-5RYFjlVZWcROssj25mj8CxHbj_1rNnNuSokMcorMiQ';
+  const TEST_MODEL = 'Qwen/Qwen3-32B';
+
+  const callSummaryAPI = async (content: string, volumeIndex: number): Promise<string> => {
+    const apiUrl = settings.apiConfig.url || TEST_API_URL;
+    const apiKey = settings.apiConfig.apiKey || TEST_API_KEY;
+    const model = settings.apiConfig.model || TEST_MODEL;
+
+    const promptTemplate = mergeSettings.promptTemplate || DEFAULT_SUMMARY_PROMPT;
+    const finalPrompt = promptTemplate.replace('$CONTENT', content);
+
+    const response = await fetch(`${apiUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'user', content: finalPrompt }
+        ],
+        max_tokens: settings.apiConfig.maxTokens || 8000,
+        temperature: settings.apiConfig.temperature || 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API调用失败: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || `第${volumeIndex}卷总结生成失败`;
+  };
+
   const handleStartSummary = async () => {
     if (chunkCount === 0) {
       toast.error('没有可总结的分块数据，请先导入文本');
@@ -123,7 +161,10 @@ export function MergePanel() {
       return;
     }
 
-    if (!confirm(`即将开始分卷总结。\n\n待处理: ${chunksToProcess.length} 个分块\n范围: 第 ${startIdx + 1} 到第 ${endIdx} 块\n\n此操作将调用AI生成段落式总结。`)) {
+    const apiUrl = settings.apiConfig.url || TEST_API_URL;
+    const isUsingTestApi = !settings.apiConfig.url;
+
+    if (!confirm(`即将开始分卷总结。\n\n待处理: ${chunksToProcess.length} 个分块\n范围: 第 ${startIdx + 1} 到第 ${endIdx} 块\nAPI: ${isUsingTestApi ? '测试API' : apiUrl}\n\n此操作将调用AI生成段落式总结。`)) {
       return;
     }
 
@@ -132,30 +173,26 @@ export function MergePanel() {
     setSummaryResults([]);
     toast.info('开始分卷总结...');
 
-    // 模拟分卷总结过程
     const results: string[] = [];
     for (let i = 0; i < chunksToProcess.length; i++) {
-      setSummaryProgress(((i + 1) / chunksToProcess.length) * 100);
-      
-      // 模拟生成一个分卷总结
-      const mockSummary = `### 存档节点：第${i + 1}卷 - 示例卷名
-
-#### 【本卷概要】
-
-这是第${i + 1}个分块的模拟总结内容。在实际使用中，此处将由AI根据提示词模板生成详细的分卷总结，包含剧情脉络、角色关系变化等信息。
-
-#### 【关键事件索引】
-
-- **事件1**: 示例关键事件描述
-- **事件2**: 示例关键事件描述
-
-***`;
-      
-      results.push(mockSummary);
-      await new Promise(resolve => setTimeout(resolve, 800));
+      try {
+        setSummaryProgress(((i + 0.5) / chunksToProcess.length) * 100);
+        
+        const summary = await callSummaryAPI(chunksToProcess[i], startIdx + i + 1);
+        results.push(summary);
+        
+        setSummaryProgress(((i + 1) / chunksToProcess.length) * 100);
+        setSummaryResults([...results]);
+        
+        toast.success(`第 ${startIdx + i + 1} 卷总结完成`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : '未知错误';
+        toast.error(`第 ${startIdx + i + 1} 卷总结失败: ${errorMsg}`);
+        results.push(`### 第${startIdx + i + 1}卷 - 生成失败\n\n错误: ${errorMsg}`);
+        setSummaryResults([...results]);
+      }
     }
 
-    setSummaryResults(results);
     setIsSummarizing(false);
     toast.success('分卷总结完成！');
   };
