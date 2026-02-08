@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+# 小说拆分与世界书生成工具
 
-## Project info
+一款用于拆分长篇小说、提取角色信息、生成结构化世界书的工具。
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+[![Deploy with Lovable](https://lovable.dev/deploy-button.svg)](https://lovable.dev/projects/5665d545-6dcc-46fb-95c6-72c6ed704739/remix)
 
-## How can I edit this code?
+## ✨ 功能特性
 
-There are several ways of editing your application.
+### 📖 小说导入与拆分
+- 支持导入长篇小说文本
+- 按固定字符数智能拆分章节
+- 保留上下文连贯性
 
-**Use Lovable**
+### 👤 角色追踪系统
+- **主角表**：记录主角各阶段发展，支持阶段标识和状态变化记录
+- **重要人物表**：追踪配角信息，包含与主角关系、首次登场等
+- 小变化标注更新，大变化生成新条目
+- 完整的角色发展轨迹记录
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 📊 数据表格管理
+- 可视化表格编辑器
+- 支持多种数据表类型（世界观、势力、地点等）
+- 灵活的列配置
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🔗 世界书导出
+- 一键导出为世界书格式
+- 支持合并多个数据源
+- 自定义导出模板
 
-**Use your preferred IDE**
+### ⚙️ 提示词配置
+- 可自定义AI提示词模板
+- 支持API设置
+- 灵活的生成参数调整
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 快速开始
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. 点击上方 **Deploy with Lovable** 按钮一键部署
+2. 导入小说文本文件
+3. 配置拆分参数和提示词模板
+4. 运行生成，获取结构化数据
+5. 导出为世界书格式
 
-Follow these steps:
+## 🛠️ 技术栈
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
+- React + TypeScript
 - Vite
-- TypeScript
-- React
-- shadcn-ui
 - Tailwind CSS
+- shadcn/ui
+- Zustand 状态管理
 
-## How can I deploy this project?
+## 📝 使用说明
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### 导入小说
+在「导入」面板中上传或粘贴小说文本，设置拆分字符数。
 
-## Can I connect a custom domain to my Lovable project?
+### 配置提示词
+在「设置」中配置API密钥和提示词模板，用于AI生成角色信息。
 
-Yes, you can!
+### 查看与编辑
+在「数据库」面板中查看和编辑生成的各类表格数据。
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 导出世界书
+在「合并」面板中选择需要导出的数据，生成最终的世界书文件。
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📄 License
+
+MIT License
