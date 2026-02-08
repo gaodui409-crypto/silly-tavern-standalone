@@ -11,7 +11,8 @@ import {
   RotateCcw,
   Loader2,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Sparkles
 } from 'lucide-react';
 import { useDatabaseStore } from '@/stores/databaseStore';
 import { Button } from '@/components/ui/button';
@@ -24,13 +25,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// 内置测试API配置
+const TEST_API_PRESETS = {
+  test: {
+    name: '测试API (Canopywave)',
+    url: 'https://inference.canopywave.io/v1',
+    apiKey: '-5RYFjlVZWcROssj25mj8CxHbj_1rNnNuSokMcorMiQ',
+    models: ['Qwen/Qwen3-32B', 'Qwen/Qwen3-14B', 'deepseek-ai/DeepSeek-V3-0324']
+  }
+};
+
 export function ApiSettings() {
   const { settings, setSettings } = useDatabaseStore();
   const [isLoading, setIsLoading] = useState(false);
   const [models, setModels] = useState<string[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [useBuiltinApi, setUseBuiltinApi] = useState(
+    settings.apiConfig.url === TEST_API_PRESETS.test.url
+  );
 
   const apiConfig = settings.apiConfig;
+
+  const handleUseBuiltinApi = (checked: boolean) => {
+    setUseBuiltinApi(checked);
+    if (checked) {
+      const preset = TEST_API_PRESETS.test;
+      setSettings({
+        apiConfig: {
+          ...apiConfig,
+          url: preset.url,
+          apiKey: preset.apiKey,
+          model: preset.models[0],
+          useMainApi: false
+        }
+      });
+      setModels(preset.models);
+      setConnectionStatus('success');
+      toast.success('已切换到内置测试API');
+    } else {
+      setSettings({
+        apiConfig: {
+          ...apiConfig,
+          url: '',
+          apiKey: '',
+          model: ''
+        }
+      });
+      setModels([]);
+      setConnectionStatus('idle');
+    }
+  };
 
   const handleTestConnection = async () => {
     if (!apiConfig.url) {
@@ -42,7 +86,7 @@ export function ApiSettings() {
     setConnectionStatus('idle');
 
     try {
-      const response = await fetch(`${apiConfig.url}/v1/models`, {
+      const response = await fetch(`${apiConfig.url}/models`, {
         headers: {
           'Authorization': `Bearer ${apiConfig.apiKey}`,
           'Content-Type': 'application/json',
@@ -85,14 +129,44 @@ export function ApiSettings() {
           </TabsList>
 
           <TabsContent value="api" className="space-y-6">
+            {/* Built-in Test API */}
+            <Card className="card-hover border-primary/30 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  快速开始
+                </CardTitle>
+                <CardDescription>使用内置测试API，无需配置即可体验功能</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">使用内置测试API</Label>
+                    <p className="text-sm text-muted-foreground">
+                      自动配置 Canopywave API (Qwen3-32B)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={useBuiltinApi}
+                    onCheckedChange={handleUseBuiltinApi}
+                  />
+                </div>
+                {useBuiltinApi && (
+                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm text-green-600">
+                    ✓ 测试API已激活，可直接使用分卷总结等功能
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* API Mode Selection */}
             <Card className="card-hover">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="w-5 h-5 text-primary" />
-                  API模式
+                  自定义API
                 </CardTitle>
-                <CardDescription>选择API连接方式</CardDescription>
+                <CardDescription>或者配置您自己的API端点</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -101,12 +175,15 @@ export function ApiSettings() {
                     <p className="text-sm text-muted-foreground">直接连接到OpenAI兼容的API端点</p>
                   </div>
                   <Switch
-                    checked={!apiConfig.useMainApi}
-                    onCheckedChange={(checked) => 
+                    checked={!apiConfig.useMainApi && !useBuiltinApi}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setUseBuiltinApi(false);
+                      }
                       setSettings({ 
                         apiConfig: { ...apiConfig, useMainApi: !checked } 
-                      })
-                    }
+                      });
+                    }}
                   />
                 </div>
               </CardContent>
