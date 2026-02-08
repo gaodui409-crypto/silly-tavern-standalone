@@ -12,7 +12,8 @@ import {
   Trash2,
   Plus,
   BookOpen,
-  Merge
+  Merge,
+  Cog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDatabaseStore } from '@/stores/databaseStore';
@@ -26,19 +27,29 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
 
-const menuItems = [
-  { id: 'database', label: '数据库', icon: Database },
-  { id: 'settings', label: 'API设置', icon: Settings },
+// 按使用流程排序的主菜单
+const workflowItems = [
+  { id: 'import', label: '① 导入文本', icon: FileUp, description: '加载小说' },
+  { id: 'database', label: '② 数据库', icon: Database, description: '查看数据' },
+  { id: 'plot', label: '③ 剧情推进', icon: Sparkles, description: '继续创作' },
+  { id: 'merge', label: '④ 合并总结', icon: Merge, description: '整理输出' },
+];
+
+// 设置类菜单
+const settingsItems = [
+  { id: 'settings', label: 'API设置', icon: Cog },
   { id: 'prompts', label: '提示词', icon: BookOpen },
-  { id: 'import', label: '外部导入', icon: FileUp },
-  { id: 'plot', label: '剧情推进', icon: Sparkles },
-  { id: 'merge', label: '合并总结', icon: Merge },
 ];
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
@@ -53,6 +64,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   
   const [newTableName, setNewTableName] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const sortedSheets = Object.entries(database)
     .map(([key, sheet]) => ({ key, ...sheet }))
@@ -67,6 +79,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     }
   };
 
+  const isSettingsActive = activeTab === 'settings' || activeTab === 'prompts';
+
   return (
     <div className="w-64 h-full bg-sidebar flex flex-col border-r border-sidebar-border">
       {/* Logo */}
@@ -77,14 +91,19 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           </div>
           <div>
             <h1 className="font-bold text-lg gradient-text">TavernDB</h1>
-            <p className="text-xs text-muted-foreground">数据库管理器</p>
+            <p className="text-xs text-muted-foreground">小说数据库管理器</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Workflow Navigation */}
       <nav className="p-2">
-        {menuItems.map((item) => {
+        <div className="px-3 py-1.5 mb-1">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            工作流程
+          </span>
+        </div>
+        {workflowItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           
@@ -117,7 +136,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       {/* Divider */}
       <div className="divider-gradient mx-4 my-2" />
 
-      {/* Tables List */}
+      {/* Tables List - Only show when database tab is active or always visible */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="px-4 py-2 flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -220,6 +239,58 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             })}
           </AnimatePresence>
         </ScrollArea>
+      </div>
+
+      {/* Settings Section */}
+      <div className="border-t border-sidebar-border">
+        <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <CollapsibleTrigger asChild>
+            <button className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 transition-all",
+              isSettingsActive 
+                ? "bg-sidebar-accent/50" 
+                : "hover:bg-sidebar-accent/30"
+            )}>
+              <Settings className={cn(
+                "w-4 h-4",
+                isSettingsActive && "text-primary"
+              )} />
+              <span className="text-sm font-medium">设置</span>
+              <motion.div
+                animate={{ rotate: isSettingsOpen ? 180 : 0 }}
+                className="ml-auto"
+              >
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              </motion.div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-2 pb-2">
+              {settingsItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                
+                return (
+                  <motion.button
+                    key={item.id}
+                    onClick={() => onTabChange(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-all",
+                      isActive 
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    )}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Icon className={cn("w-4 h-4", isActive && "text-primary")} />
+                    <span className="text-sm">{item.label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Footer */}
