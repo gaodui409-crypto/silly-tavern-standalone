@@ -86,25 +86,41 @@ export function ApiSettings() {
     setConnectionStatus('idle');
 
     try {
-      const response = await fetch(`${apiConfig.url}/models`, {
+      // 尝试发送一个简单的聊天请求来测试连接
+      const response = await fetch(`${apiConfig.url}/chat/completions`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.apiKey}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          model: apiConfig.model || 'moonshotai/kimi-k2.5',
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 10,
+          temperature: 0.1
+        })
       });
 
       if (response.ok) {
         const data = await response.json();
-        const modelList = data.data?.map((m: any) => m.id) || [];
-        setModels(modelList);
-        setConnectionStatus('success');
-        toast.success(`连接成功！找到 ${modelList.length} 个模型`);
+        if (data.choices && data.choices.length > 0) {
+          setConnectionStatus('success');
+          toast.success('API连接成功！模型响应正常');
+        } else {
+          throw new Error('响应格式异常');
+        }
       } else {
-        throw new Error('连接失败');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       setConnectionStatus('error');
-      toast.error('连接失败，请检查API地址和密钥');
+      // 检测是否是CORS错误
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        toast.error('跨域限制：浏览器无法直接访问该API。请启用Cloud后端来代理请求，或使用支持CORS的API端点。');
+      } else {
+        toast.error(`连接失败: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
