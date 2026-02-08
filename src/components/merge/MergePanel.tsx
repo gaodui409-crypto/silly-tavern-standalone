@@ -121,29 +121,46 @@ export function MergePanel() {
     const promptTemplate = mergeSettings.promptTemplate || DEFAULT_SUMMARY_PROMPT;
     const finalPrompt = promptTemplate.replace('$CONTENT', content);
 
-    const response = await fetch(`${apiUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: 'user', content: finalPrompt }
-        ],
-        max_tokens: settings.apiConfig.maxTokens || 8000,
-        temperature: settings.apiConfig.temperature || 0.7,
-      }),
-    });
+    const requestUrl = `${apiUrl}/chat/completions`;
+    console.log(`[Summary API] 第${volumeIndex}卷 - 请求URL:`, requestUrl);
+    console.log(`[Summary API] 第${volumeIndex}卷 - 使用模型:`, model);
+    console.log(`[Summary API] 第${volumeIndex}卷 - 内容长度:`, content.length);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API调用失败: ${response.status} - ${errorText}`);
+    try {
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'user', content: finalPrompt }
+          ],
+          max_tokens: settings.apiConfig.maxTokens || 8000,
+          temperature: settings.apiConfig.temperature || 0.7,
+        }),
+      });
+
+      console.log(`[Summary API] 第${volumeIndex}卷 - 响应状态:`, response.status);
+
+      const responseText = await response.text();
+      console.log(`[Summary API] 第${volumeIndex}卷 - 响应长度:`, responseText.length);
+
+      if (!response.ok) {
+        console.error(`[Summary API] 第${volumeIndex}卷 - 错误响应:`, responseText.substring(0, 500));
+        throw new Error(`API调用失败: ${response.status} - ${responseText.substring(0, 200)}`);
+      }
+
+      const data = JSON.parse(responseText);
+      const result = data.choices?.[0]?.message?.content || `第${volumeIndex}卷总结生成失败`;
+      console.log(`[Summary API] 第${volumeIndex}卷 - 成功! 结果长度:`, result.length);
+      return result;
+    } catch (error: any) {
+      console.error(`[Summary API] 第${volumeIndex}卷 - 请求异常:`, error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || `第${volumeIndex}卷总结生成失败`;
   };
 
   const handleStartSummary = async () => {

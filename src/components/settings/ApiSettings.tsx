@@ -85,41 +85,65 @@ export function ApiSettings() {
     setIsLoading(true);
     setConnectionStatus('idle');
 
+    const testUrl = `${apiConfig.url}/chat/completions`;
+    console.log('[API Test] 开始测试连接:', testUrl);
+    console.log('[API Test] 使用模型:', apiConfig.model || 'moonshotai/kimi-k2.5');
+
     try {
-      // 尝试发送一个简单的聊天请求来测试连接
-      const response = await fetch(`${apiConfig.url}/chat/completions`, {
+      const requestBody = {
+        model: apiConfig.model || 'moonshotai/kimi-k2.5',
+        messages: [{ role: 'user', content: 'hi' }],
+        max_tokens: 10,
+        temperature: 0.1
+      };
+      
+      console.log('[API Test] 请求体:', JSON.stringify(requestBody));
+
+      const response = await fetch(testUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiConfig.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: apiConfig.model || 'moonshotai/kimi-k2.5',
-          messages: [{ role: 'user', content: 'hi' }],
-          max_tokens: 10,
-          temperature: 0.1
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('[API Test] 响应状态:', response.status, response.statusText);
+
+      const responseText = await response.text();
+      console.log('[API Test] 响应内容:', responseText.substring(0, 500));
+
       if (response.ok) {
-        const data = await response.json();
+        const data = JSON.parse(responseText);
         if (data.choices && data.choices.length > 0) {
           setConnectionStatus('success');
-          toast.success('API连接成功！模型响应正常');
+          const reply = data.choices[0].message?.content || '';
+          toast.success(`API连接成功！模型回复: "${reply.substring(0, 50)}..."`);
+          console.log('[API Test] 成功! 模型回复:', reply);
         } else {
-          throw new Error('响应格式异常');
+          throw new Error('响应格式异常: ' + responseText.substring(0, 100));
         }
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
       setConnectionStatus('error');
-      // 检测是否是CORS错误
-      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
-        toast.error('跨域限制：浏览器无法直接访问该API。请启用Cloud后端来代理请求，或使用支持CORS的API端点。');
+      console.error('[API Test] 错误:', error);
+      console.error('[API Test] 错误类型:', error.name);
+      console.error('[API Test] 错误消息:', error.message);
+      
+      // 更详细的错误提示
+      if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+        toast.error('网络请求失败 - 可能原因: 1) API地址错误 2) 网络问题 3) CORS限制。请检查浏览器控制台获取详细信息。', {
+          duration: 8000
+        });
       } else {
-        toast.error(`连接失败: ${error.message}`);
+        toast.error(`连接失败: ${error.message}`, { duration: 5000 });
       }
     } finally {
       setIsLoading(false);
