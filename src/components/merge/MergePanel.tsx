@@ -111,7 +111,7 @@ export function MergePanel() {
   // 内置测试API配置
   const TEST_API_URL = 'https://inference.canopywave.io/v1';
   const TEST_API_KEY = '-5RYFjlVZWcROssj25mj8CxHbj_1rNnNuSokMcorMiQ';
-  const TEST_MODEL = 'Qwen/Qwen3-32B';
+  const TEST_MODEL = 'moonshotai/kimi-k2.5';
 
   const callSummaryAPI = async (content: string, volumeIndex: number): Promise<string> => {
     const apiUrl = settings.apiConfig.url || TEST_API_URL;
