@@ -43,7 +43,7 @@ const workflowItems = [
   { id: 'import', label: '① 导入文本', icon: FileUp, description: '加载小说' },
   { id: 'database', label: '② 数据库', icon: Database, description: '查看数据' },
   { id: 'plot', label: '③ 剧情推进', icon: Sparkles, description: '继续创作' },
-  { id: 'merge', label: '④ 合并总结', icon: Merge, description: '整理输出' },
+  { id: 'merge', label: '④ 分卷总结', icon: Merge, description: '整理输出' },
 ];
 
 // 设置类菜单
