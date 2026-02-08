@@ -31,7 +31,7 @@ const TEST_API_PRESETS = {
     name: '测试API (Canopywave)',
     url: 'https://inference.canopywave.io/v1',
     apiKey: '-5RYFjlVZWcROssj25mj8CxHbj_1rNnNuSokMcorMiQ',
-    models: ['Qwen/Qwen3-32B', 'Qwen/Qwen3-14B', 'deepseek-ai/DeepSeek-V3-0324']
+    models: ['moonshotai/kimi-k2.5', 'Qwen/Qwen3-32B', 'deepseek-ai/DeepSeek-V3-0324']
   }
 };
 
@@ -152,8 +152,26 @@ export function ApiSettings() {
                   />
                 </div>
                 {useBuiltinApi && (
-                  <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm text-green-600">
-                    ✓ 测试API已激活，可直接使用分卷总结等功能
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm text-green-600">
+                      ✓ 测试API已激活 (moonshotai/kimi-k2.5)
+                    </div>
+                    <Button 
+                      onClick={handleTestConnection}
+                      disabled={isLoading}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : connectionStatus === 'success' ? (
+                        <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                      ) : connectionStatus === 'error' ? (
+                        <XCircle className="w-4 h-4 mr-2 text-red-500" />
+                      ) : null}
+                      检测API连接
+                    </Button>
                   </div>
                 )}
               </CardContent>
