@@ -29,7 +29,7 @@ import type { ImportChunk, ImportStatus } from '@/types/database';
 import { SAMPLE_NOVEL, SAMPLE_CHARACTERS } from '@/data/sampleNovel';
 
 export function ImportPanel() {
-  const { settings, setSettings, database, addRow, setCurrentSheet } = useDatabaseStore();
+  const { settings, setSettings, database, addRow, setCurrentSheet, setImportChunks } = useDatabaseStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [chunks, setChunks] = useState<ImportChunk[]>([]);
@@ -56,6 +56,7 @@ export function ImportPanel() {
     }
 
     setChunks(newChunks);
+    setImportChunks(newChunks.map(c => c.content)); // 保存到全局store供分卷总结使用
     setStatus({ total: newChunks.length, currentIndex: 0 });
     setPreviewContent(content.substring(0, 500) + '...');
     setIsSampleData(true);
@@ -89,6 +90,7 @@ export function ImportPanel() {
       }
 
       setChunks(newChunks);
+      setImportChunks(newChunks.map(c => c.content)); // 保存到全局store供分卷总结使用
       setStatus({ total: newChunks.length, currentIndex: 0 });
       setIsSampleData(false);
       toast.success(`文件已拆分为 ${newChunks.length} 个部分`);
