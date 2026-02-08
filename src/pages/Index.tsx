@@ -8,8 +8,8 @@ import { PlotPanel } from '@/components/plot/PlotPanel';
 import { MergePanel } from '@/components/merge/MergePanel';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('database');
-
+  // 默认打开导入页面作为起始点
+  const [activeTab, setActiveTab] = useState('import');
   const renderContent = () => {
     switch (activeTab) {
       case 'database':
