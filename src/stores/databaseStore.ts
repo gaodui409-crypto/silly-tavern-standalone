@@ -324,6 +324,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   dataIsolationCode: '',
   worldbookConfig: DEFAULT_WORLDBOOK_CONFIG,
   mergeSettings: DEFAULT_MERGE_SETTINGS,
+  extractionPrompt: DEFAULT_EXTRACTION_PROMPT,
+  extractionConcurrency: 3,
 };
 
 // 默认表格模板 - 与原版SillyTavern插件完全一致
