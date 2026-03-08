@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  novel-tool:
+    build: .
+    ports:
+      - "7892:7892"
+    environment:
+      - PORT=7892
+      # 测试 API 配置（可选，配置后前端可通过预设使用）
+      - TEST_API_URL=https://inference.canopywave.io/v1
+      - TEST_API_KEY=your-api-key-here
+      - TEST_MODEL=moonshotai/kimi-k2.5
+    restart: unless-stopped
+    # 可选：挂载数据卷用于持久化
+    # volumes:
+    #   - ./data:/app/data
