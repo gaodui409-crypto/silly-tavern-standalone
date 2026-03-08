@@ -667,6 +667,7 @@ interface DatabaseState {
   setIsUpdating: (value: boolean) => void;
   setUpdateProgress: (value: number) => void;
   setImportChunks: (chunks: string[]) => void;
+  clearAllData: () => Promise<void>;
 }
 
 export const useDatabaseStore = create<DatabaseState>()(
