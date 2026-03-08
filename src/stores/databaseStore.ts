@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { indexedDBStorage, clearAllStoredData } from '@/lib/indexedDBStorage';
+import { DEFAULT_EXTRACTION_PROMPT } from '@/lib/aiExtractor';
 import type { 
   DatabaseData, 
   TableSheet, 
@@ -322,6 +324,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   dataIsolationCode: '',
   worldbookConfig: DEFAULT_WORLDBOOK_CONFIG,
   mergeSettings: DEFAULT_MERGE_SETTINGS,
+  extractionPrompt: DEFAULT_EXTRACTION_PROMPT,
+  extractionConcurrency: 3,
 };
 
 // 默认表格模板 - 与原版SillyTavern插件完全一致
@@ -663,6 +667,7 @@ interface DatabaseState {
   setIsUpdating: (value: boolean) => void;
   setUpdateProgress: (value: number) => void;
   setImportChunks: (chunks: string[]) => void;
+  clearAllData: () => Promise<void>;
 }
 
 export const useDatabaseStore = create<DatabaseState>()(
@@ -928,14 +933,27 @@ export const useDatabaseStore = create<DatabaseState>()(
       setIsUpdating: (value) => set({ isUpdating: value }),
       setUpdateProgress: (value) => set({ updateProgress: value }),
       setImportChunks: (chunks) => set({ importChunks: chunks }),
+      clearAllData: async () => {
+        await clearAllStoredData();
+        set({
+          database: JSON.parse(JSON.stringify(DEFAULT_TABLE_TEMPLATE)),
+          settings: { ...DEFAULT_SETTINGS },
+          globalMeta: { version: 1, activeIsolationCode: '', isolationCodeList: [] },
+          profiles: {},
+          importChunks: [],
+          currentSheetKey: 'sheet_global',
+        });
+      },
     }),
     {
       name: 'tavern-db-storage',
+      storage: createJSONStorage(() => indexedDBStorage),
       partialize: (state) => ({
         database: state.database,
         settings: state.settings,
         globalMeta: state.globalMeta,
         profiles: state.profiles,
+        importChunks: state.importChunks,
       }),
     }
   )
