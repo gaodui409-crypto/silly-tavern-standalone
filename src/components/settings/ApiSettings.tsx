@@ -12,7 +12,8 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { useDatabaseStore } from '@/stores/databaseStore';
 import { Button } from '@/components/ui/button';
