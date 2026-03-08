@@ -644,6 +644,8 @@ interface DatabaseState {
   globalMeta: GlobalMeta;
   profiles: Record<string, IsolationProfile>;
   importChunks: string[];
+  diaryResults: string[];
+  summaryResults: string[];
   
   // UI 状态
   currentSheetKey: string | null;
@@ -675,6 +677,8 @@ interface DatabaseState {
   setIsUpdating: (value: boolean) => void;
   setUpdateProgress: (value: number) => void;
   setImportChunks: (chunks: string[]) => void;
+  setDiaryResults: (results: string[]) => void;
+  setSummaryResults: (results: string[]) => void;
   clearAllData: () => Promise<void>;
 }
 
