@@ -1,13 +1,14 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { FileUp, Bot, Database, Merge, BookOpen } from 'lucide-react';
+import { FileUp, Bot, Database, BookOpen, Download } from 'lucide-react';
+import { useDatabaseStore } from '@/stores/databaseStore';
 
 const steps = [
-  { id: 'import', label: '导入文本', icon: FileUp, num: '①' },
-  { id: 'extract', label: 'AI提取角色', icon: Bot, num: '②', parentTab: 'import' },
-  { id: 'database', label: '数据库编辑', icon: Database, num: '③' },
-  { id: 'merge', label: '分卷总结', icon: Merge, num: '④' },
-  { id: 'worldbook', label: '导出世界书', icon: BookOpen, num: '⑤', parentTab: 'merge' },
+  { id: 'import', label: '导入', icon: FileUp, num: '①' },
+  { id: 'extract', label: 'AI 处理', icon: Bot, num: '②', parentTab: 'import' },
+  { id: 'database', label: '数据编辑', icon: Database, num: '③' },
+  { id: 'merge', label: '结果查看', icon: BookOpen, num: '④' },
+  { id: 'worldbook', label: '导出世界书', icon: Download, num: '⑤', parentTab: 'merge' },
 ];
 
 interface WorkflowProgressProps {
@@ -16,13 +17,20 @@ interface WorkflowProgressProps {
 }
 
 export function WorkflowProgress({ activeTab, onTabChange }: WorkflowProgressProps) {
+  const { settings } = useDatabaseStore();
+
+  const taskTypeLabels: Record<string, string> = {
+    extraction: 'AI 提取',
+    summary: '分卷总结',
+    diary: '日记生成',
+  };
+
   const getStepStatus = (stepId: string) => {
     const stepIndex = steps.findIndex(s => s.id === stepId);
     const activeIndex = steps.findIndex(s => 
       s.id === activeTab || s.parentTab === activeTab || activeTab === s.id
     );
     
-    // Check if step matches current active tab
     const step = steps[stepIndex];
     const isActive = step.id === activeTab || step.parentTab === activeTab;
     
@@ -42,6 +50,9 @@ export function WorkflowProgress({ activeTab, onTabChange }: WorkflowProgressPro
         {steps.map((step, index) => {
           const status = getStepStatus(step.id);
           const Icon = step.icon;
+          const label = step.id === 'extract' 
+            ? (taskTypeLabels[settings.taskType] || step.label) 
+            : step.label;
 
           return (
             <div key={step.id} className="flex items-center">
@@ -57,7 +68,7 @@ export function WorkflowProgress({ activeTab, onTabChange }: WorkflowProgressPro
                 whileTap={{ scale: 0.95 }}
               >
                 <Icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{step.label}</span>
+                <span className="hidden sm:inline">{label}</span>
                 <span className="sm:hidden">{step.num}</span>
               </motion.button>
 

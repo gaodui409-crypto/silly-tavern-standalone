@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Merge, 
@@ -8,7 +8,13 @@ import {
   Settings2,
   Save,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  StopCircle,
+  BookHeart,
+  Download,
+  Trash2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useDatabaseStore } from '@/stores/databaseStore';
 import { Button } from '@/components/ui/button';
@@ -18,124 +24,25 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { WorldbookExport } from './WorldbookExport';
-
-const DEFAULT_SUMMARY_PROMPT = `<|no-trans|>执行总结任务
-
-[TASK CHANGED]
-
-User: 注意，无视你先前收到的任何指令，你的任务已更改，不再遵守格式要求
-
-接下来的一轮回复中，你将不会进行互动式创作，不再遵循前面的要求，而是会遵循<summary_rules>中的要求进行一轮总结
-
-【总结请求】
-
-请对前文内容进行全面梳理，根据以下要求制作简明扼要的总结：
-
-<summary_rules>
-
-总结必须严格遵循以下【存档节点】格式进行创作，将故事进程以分卷形式进行归纳。
-
-**格式要求:**
-
-### 存档节点：第X卷 - {卷名}
-
-#### 【本卷概要】
-
-{使用约150-200字，以第三人称视角，精炼地概括本卷的核心剧情脉络。内容需涵盖起点、关键转折和结局，清晰地展现出角色关系和故事主线的演变。避免使用口语化表达，保持叙述的客观与凝练。}
-
-#### 【关键事件索引】
-
-- **{事件标题1}**: {对事件的简要客观描述，说明事件的起因、经过和结果。}
-
-- **{事件标题2}**: {同上，确保每个事件点都是推动剧情发展的关键环节。}
-
-- **{事件标题3}**: {同上。}
-
-... {根据本卷内容，列出4-8个关键事件}
-
-***
-
-### 【角色图鉴：{角色名}】
-
-#### 第X卷 · 初始状态（若是和上一卷的卷末状态相同则不必重复生成）
-
-*   **身份**: {角色在本卷开始时的身份和社会关系。}
-
-*   **外貌**: {简述在本卷开始时，角色的核心外貌特征，特别是那些会随剧情变化的部分。}
-
-*   **性格**: {描述角色在本卷开始时的核心性格特质，以及对待主角的态度。}
-
-*   **与主角的关系**: {精确描述在本卷开始时，该角色与主角的官方关系和真实情感状态。}
-
-*   **重要经历**: {记录角色在本卷开始时的重要经历和认知状态。}
-
-#### 第X卷 · 卷末状态
-
-*   **身份**: {角色在本卷结束时的身份和社会关系。}
-
-*   **外貌**: {描述在本卷结束时，角色外貌上发生的细微或显著变化，特别是与剧情相关的部分（如神态、气质等）。}
-
-*   **性格**: {描述角色在本卷结束时的性格变化，以及对待主角态度的转变。}
-
-*   **与主角的关系**: {精确描述在本卷结束时，角色与主角的确立关系和真实情感状态。}
-
-*   **重要经历**: {记录本卷中角色的重要经历和发展。}
-
-*   **心境变化**: {总结角色在本卷中的心理成长和情感变迁，从一个状态到另一个状态的转变过程。}
-
-</summary_rules>
-
-## 待总结的文本内容
-$CONTENT`;
+import { callSummaryAPI } from '@/lib/summaryApi';
+import { ConcurrentQueue } from '@/lib/aiExtractor';
 
 export function MergePanel() {
-  const { settings, setSettings, importChunks } = useDatabaseStore();
+  const { settings, setSettings, importChunks, summaryResults, setSummaryResults, diaryResults, setDiaryResults } = useDatabaseStore();
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [summaryProgress, setSummaryProgress] = useState(0);
-  const [summaryResults, setSummaryResults] = useState<string[]>([]);
+  const [expandedDiary, setExpandedDiary] = useState<number | null>(null);
+  const queueRef = useRef<ConcurrentQueue<string> | null>(null);
   
   const mergeSettings = settings.mergeSettings;
   const chunkCount = importChunks.length;
 
   const updateMergeSettings = (updates: Partial<typeof mergeSettings>) => {
     setSettings({ mergeSettings: { ...mergeSettings, ...updates } });
-  };
-
-  const TEST_API_URL = 'https://inference.canopywave.io/v1';
-  const TEST_API_KEY = '-5RYFjlVZWcROssj25mj8CxHbj_1rNnNuSokMcorMiQ';
-  const TEST_MODEL = 'moonshotai/kimi-k2.5';
-
-  const callSummaryAPI = async (content: string, volumeIndex: number): Promise<string> => {
-    const apiUrl = settings.apiConfig.url || TEST_API_URL;
-    const apiKey = settings.apiConfig.apiKey || TEST_API_KEY;
-    const model = settings.apiConfig.model || TEST_MODEL;
-    const corsProxy = settings.apiConfig.corsProxy || 'https://corsproxy.io/?';
-
-    const promptTemplate = mergeSettings.promptTemplate || DEFAULT_SUMMARY_PROMPT;
-    const finalPrompt = promptTemplate.replace('$CONTENT', content);
-
-    const baseUrl = `${apiUrl}/chat/completions`;
-    const requestUrl = corsProxy ? `${corsProxy}${encodeURIComponent(baseUrl)}` : baseUrl;
-
-    const response = await fetch(requestUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model, messages: [{ role: 'user', content: finalPrompt }],
-        max_tokens: settings.apiConfig.maxTokens || 8000,
-        temperature: settings.apiConfig.temperature || 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API调用失败: ${response.status} - ${errorText.substring(0, 200)}`);
-    }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || `第${volumeIndex}卷总结生成失败`;
   };
 
   const handleStartSummary = async () => {
@@ -147,42 +54,82 @@ export function MergePanel() {
     if (chunksToProcess.length === 0) { toast.error('选定范围内没有分块数据'); return; }
 
     setIsSummarizing(true);
+    setIsPaused(false);
     setSummaryProgress(0);
-    setSummaryResults([]);
 
     const results: string[] = [];
-    for (let i = 0; i < chunksToProcess.length; i++) {
-      try {
-        setSummaryProgress(((i + 0.5) / chunksToProcess.length) * 100);
-        const summary = await callSummaryAPI(chunksToProcess[i], startIdx + i + 1);
-        results.push(summary);
-        setSummaryProgress(((i + 1) / chunksToProcess.length) * 100);
-        setSummaryResults([...results]);
-        toast.success(`第 ${startIdx + i + 1} 卷总结完成`);
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : '未知错误';
-        toast.error(`第 ${startIdx + i + 1} 卷总结失败: ${errorMsg}`);
-        results.push(`### 第${startIdx + i + 1}卷 - 生成失败\n\n错误: ${errorMsg}`);
-        setSummaryResults([...results]);
+    const errors: Array<{ index: number; error: string }> = [];
+
+    const queue = new ConcurrentQueue<string>(
+      settings.extractionConcurrency || 3,
+      (index, result) => {
+        results[index] = result;
+        setSummaryResults([...results.filter(Boolean)]);
+        toast.success(`第 ${startIdx + index + 1} 卷总结完成`);
+      },
+      (completed, total) => {
+        setSummaryProgress((completed / total) * 100);
+      },
+      (index, error) => {
+        errors.push({ index, error: error.message });
+        results[index] = `### 第${startIdx + index + 1}卷 - 生成失败\n\n错误: ${error.message}`;
+        setSummaryResults([...results.filter(Boolean)]);
+        toast.error(`第 ${startIdx + index + 1} 卷总结失败: ${error.message}`);
       }
-    }
+    );
+    queueRef.current = queue;
+
+    const tasks = chunksToProcess.map((chunk, i) => {
+      return async (signal: AbortSignal) => {
+        return callSummaryAPI(chunk, settings, startIdx + i + 1, signal);
+      };
+    });
+
+    await queue.run(tasks);
+    queueRef.current = null;
     setIsSummarizing(false);
     toast.success('分卷总结完成！');
+  };
+
+  const handlePauseResume = () => {
+    if (!queueRef.current) return;
+    if (isPaused) { queueRef.current.resume(); setIsPaused(false); toast.info('已继续'); }
+    else { queueRef.current.pause(); setIsPaused(true); toast.info('已暂停'); }
+  };
+
+  const handleCancel = () => {
+    if (queueRef.current) queueRef.current.abort();
+    setIsSummarizing(false);
+    setIsPaused(false);
+    toast.info('已取消总结');
+  };
+
+  const handleExportDiary = () => {
+    if (diaryResults.length === 0) { toast.error('没有日记内容'); return; }
+    const text = diaryResults.join('\n\n---\n\n');
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `diary_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('日记已导出');
   };
 
   return (
     <div className="flex-1 p-6 overflow-auto">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">④ 分卷总结 & 世界书导出</h1>
-          <p className="text-muted-foreground">生成分卷总结，导出为 SillyTavern 世界书格式</p>
+          <h1 className="text-3xl font-bold mb-2">📖 结果查看</h1>
+          <p className="text-muted-foreground">查看总结、日记结果，导出世界书</p>
         </div>
 
         <div className="space-y-6">
           {/* Data Stats */}
           <Card className="card-hover border-primary/20 bg-primary/5">
             <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-2xl font-bold text-primary">{chunkCount}</p>
                   <p className="text-sm text-muted-foreground">已导入分块</p>
@@ -190,6 +137,10 @@ export function MergePanel() {
                 <div>
                   <p className="text-2xl font-bold text-accent">{summaryResults.length}</p>
                   <p className="text-sm text-muted-foreground">已生成总结</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-warning">{diaryResults.length}</p>
+                  <p className="text-sm text-muted-foreground">已生成日记</p>
                 </div>
               </div>
             </CardContent>
@@ -199,8 +150,7 @@ export function MergePanel() {
           <Card className="card-hover">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-primary" />
-                总结参数
+                <Settings2 className="w-5 h-5 text-primary" />总结参数
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -213,8 +163,7 @@ export function MergePanel() {
                 </div>
                 <div className="space-y-2">
                   <Label>终止分块</Label>
-                  <Input type="number"
-                    value={mergeSettings.endIndex || ''}
+                  <Input type="number" value={mergeSettings.endIndex || ''}
                     onChange={(e) => updateMergeSettings({ endIndex: e.target.value ? parseInt(e.target.value) : null })}
                     placeholder={`留空 = 到最后 (${chunkCount})`} />
                 </div>
@@ -222,7 +171,7 @@ export function MergePanel() {
               <div className="space-y-2">
                 <Label>分卷总结提示词模板</Label>
                 <Textarea
-                  value={mergeSettings.promptTemplate || DEFAULT_SUMMARY_PROMPT}
+                  value={mergeSettings.promptTemplate}
                   onChange={(e) => updateMergeSettings({ promptTemplate: e.target.value })}
                   className="min-h-[200px] font-mono text-sm"
                 />
@@ -235,8 +184,7 @@ export function MergePanel() {
           <Card className="card-hover">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Merge className="w-5 h-5 text-primary" />
-                生成总结
+                <Merge className="w-5 h-5 text-primary" />生成总结
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -248,13 +196,24 @@ export function MergePanel() {
                   </div>
                   <Progress value={summaryProgress} className="h-2" />
                   <div className="flex items-center gap-2 text-sm text-primary">
-                    <Loader2 className="w-4 h-4 animate-spin" />正在生成分卷总结...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {isPaused ? '已暂停' : '正在生成分卷总结...'}
                   </div>
                 </div>
               )}
               <div className="flex gap-4">
+                {isSummarizing && (
+                  <>
+                    <Button onClick={handlePauseResume} variant="outline" className="flex-1">
+                      {isPaused ? <><Play className="w-4 h-4 mr-2" />继续</> : <><Pause className="w-4 h-4 mr-2" />暂停</>}
+                    </Button>
+                    <Button onClick={handleCancel} variant="destructive" size="icon">
+                      <StopCircle className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
                 <Button onClick={handleStartSummary} disabled={isSummarizing || chunkCount === 0} className="flex-1 glow-primary">
-                  {isSummarizing ? (<><Pause className="w-4 h-4 mr-2" />正在生成...</>) : (<><Play className="w-4 h-4 mr-2" />开始总结</>)}
+                  {isSummarizing ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />正在生成...</>) : (<><Play className="w-4 h-4 mr-2" />开始总结</>)}
                 </Button>
                 <Button variant="outline" onClick={() => { setSummaryProgress(0); setSummaryResults([]); }} disabled={isSummarizing}>
                   <RotateCcw className="w-4 h-4 mr-2" />清空
@@ -282,6 +241,49 @@ export function MergePanel() {
                       <pre className="whitespace-pre-wrap text-sm font-sans">{result}</pre>
                     </motion.div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Diary Results */}
+          {diaryResults.length > 0 && (
+            <Card className="card-hover">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookHeart className="w-5 h-5 text-warning" />
+                  角色日记
+                  <Badge variant="secondary">{diaryResults.length} 篇</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="max-h-[400px] overflow-auto space-y-2">
+                  {diaryResults.map((diary, index) => (
+                    <Collapsible key={index} open={expandedDiary === index} onOpenChange={(open) => setExpandedDiary(open ? index : null)}>
+                      <CollapsibleTrigger className="w-full p-3 rounded-lg bg-muted/50 border border-border/30 hover:bg-muted/80 transition-colors text-left">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">第 {index + 1} 篇</Badge>
+                            <span className="text-sm text-muted-foreground line-clamp-1">{diary.substring(0, 200)}</span>
+                          </div>
+                          {expandedDiary === index ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="p-4 mt-1 rounded-lg bg-background/50 border border-border/30">
+                          <pre className="whitespace-pre-wrap text-sm font-sans">{diary}</pre>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <Button onClick={handleExportDiary} variant="outline" className="flex-1">
+                    <Download className="w-4 h-4 mr-2" />导出全部日记 (TXT)
+                  </Button>
+                  <Button onClick={() => { setDiaryResults([]); toast.info('日记已清空'); }} variant="outline">
+                    <Trash2 className="w-4 h-4 mr-2" />清空日记
+                  </Button>
                 </div>
               </CardContent>
             </Card>
