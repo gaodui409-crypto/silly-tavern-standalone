@@ -534,6 +534,20 @@ export function ApiSettings() {
 
         {/* Save Button */}
         <div className="flex justify-end gap-4 mt-8">
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              if (confirm('确定清除所有数据？此操作不可恢复！')) {
+                const { clearAllData } = useDatabaseStore.getState();
+                await clearAllData();
+                toast.success('所有数据已清除');
+                window.location.reload();
+              }
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            清除所有数据
+          </Button>
           <Button variant="outline" onClick={() => window.location.reload()}>
             <RotateCcw className="w-4 h-4 mr-2" />
             重置
