@@ -1,5 +1,44 @@
 # 更新记录
 
+## v2.0.0 (2026-03-08)
+
+### 安全修复
+
+- 删除前端硬编码的 API Key 和 CORS 代理地址
+- 新建 apiProxy.ts 统一 AI 请求入口，支持 proxy/preset/direct 三种 API 模式
+- API Key 改为存储在后端环境变量，前端通过 /api/presets 获取预设列表（不暴露 Key）
+
+### 新功能：日记生成（合并 diary-weaver 项目）
+
+- 新增聊天记录输入源：支持 SillyTavern JSONL 格式导入，自动解析角色名/用户名
+- 新增任务类型选择：角色提取 / 分卷总结 / 角色日记 三种模式
+- 角色日记：以角色第一人称视角生成日记，4 种风格预设（日常温馨/文学叙事/简洁备忘/自定义）
+- NSFW 开关：控制是否在提示词中添加内容保留指令
+- 日记结果持久化存储并可批量导出为 TXT
+
+### 世界书导出增强
+
+- 新增日记条目导出（position=At Depth, constant=true）
+- 导出选项按内容类型分组：数据表类、总结类、日记类各自独立设置 depth/position/selective/constant
+- 日记结果展示面板：预览、展开、单篇导出、批量导出
+
+### Bug 修复
+
+- 修复 ConcurrentQueue 错误跳过导致后续缓存结果丢失的问题（改为 null 占位 + 顺序 flush）
+- 补全已有角色更新逻辑（status/relationship 变化时追加备注记录）
+- 分卷总结改用 ConcurrentQueue，支持暂停和取消
+
+### UI 调整
+
+- 侧边栏精简为：导入 / 数据库 / 结果 / 设置
+- 流程进度条步骤 ② 根据任务类型动态显示名称
+- API 设置改为 proxy/preset/direct 三选一 RadioGroup
+
+### 其他
+
+- Dockerfile 统一使用 npm（删除 bun.lock/bun.lockb）
+- ApiConfig 类型删除 corsProxy 字段
+
 ## [0.3.0] - 2026-03-08
 
 ### 新增

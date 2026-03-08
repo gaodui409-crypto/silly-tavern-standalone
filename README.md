@@ -1,66 +1,77 @@
-# 小说拆分与世界书生成工具
+# TavernDB — 小说角色提取 & SillyTavern 世界书生成工具
 
-一款用于拆分长篇小说、提取角色信息、生成结构化世界书的工具。
-
-[![Deploy with Lovable](https://lovable.dev/deploy-button.svg)](https://lovable.dev/projects/5665d545-6dcc-46fb-95c6-72c6ed704739/remix)
+从小说文本或 SillyTavern 聊天记录中，用 AI 自动提取角色信息、生成分卷总结和角色日记，一键导出为 SillyTavern 世界书。
 
 ## ✨ 功能特性
 
-### 📖 小说导入与拆分
-- 支持导入长篇小说文本
-- 按固定字符数智能拆分章节
-- 保留上下文连贯性
+- **双输入源**：小说文本（TXT/MD）和 SillyTavern 聊天记录（JSONL）
+- **三种 AI 任务**：角色提取（结构化 JSON → 数据表）、分卷总结（剧情概要 + 角色图鉴）、角色日记（第一人称，4 种风格预设）
+- **并行处理**：可配置并发数 1-10，请求并行但数据按顺序写入
+- **9 张数据表**：全局数据、主角信息、重要人物、技能、背包、任务、总结表、总体大纲、选项表，均可自定义编辑
+- **世界书导出**：符合 SillyTavern 世界书 JSON 格式，按内容类型分组设置 depth/position/selective/constant
+- **数据持久化**：Zustand + IndexedDB，刷新不丢失
+- **Docker 一键部署**：FastAPI 后端代理解决 CORS，API Key 存后端环境变量不暴露给前端
 
-### 👤 角色追踪系统
-- **主角表**：记录主角各阶段发展，支持阶段标识和状态变化记录
-- **重要人物表**：追踪配角信息，包含与主角关系、首次登场等
-- 小变化标注更新，大变化生成新条目
-- 完整的角色发展轨迹记录
+## 🚀 部署方式
 
-### 📊 数据表格管理
-- 可视化表格编辑器
-- 支持多种数据表类型（世界观、势力、地点等）
-- 灵活的列配置
+### 方式一：Docker（推荐）
 
-### 🔗 世界书导出
-- 一键导出为世界书格式
-- 支持合并多个数据源
-- 自定义导出模板
+```bash
+docker run -d --name taverndb -p 7892:7892 \
+  -e TEST_API_URL=https://your-api-url/v1 \
+  -e TEST_API_KEY=your-key \
+  -e TEST_MODEL=your-model \
+  --restart unless-stopped \
+  ghcr.io/gaodui409-crypto/silly-tavern-standalone:latest
+```
 
-### ⚙️ 提示词配置
-- 可自定义AI提示词模板
-- 支持API设置
-- 灵活的生成参数调整
+打开 `http://IP:7892`，在设置中选择"预设 API"模式即可使用。
 
-## 🚀 快速开始
+### 方式二：Docker Compose
 
-1. 点击上方 **Deploy with Lovable** 按钮一键部署
-2. 导入小说文本文件
-3. 配置拆分参数和提示词模板
-4. 运行生成，获取结构化数据
-5. 导出为世界书格式
+```yaml
+version: "3.8"
+
+services:
+  taverndb:
+    build: .
+    ports:
+      - "7892:7892"
+    environment:
+      - TEST_API_URL=https://your-api-url/v1
+      - TEST_API_KEY=your-key
+      - TEST_MODEL=your-model
+    restart: unless-stopped
+```
+
+### 方式三：本地开发
+
+```bash
+git clone https://github.com/gaodui409-crypto/silly-tavern-standalone.git
+cd silly-tavern-standalone
+npm install
+npm run dev          # 前端 localhost:8080
+
+# 另一个终端
+cd server
+pip install -r requirements.txt
+python main.py  # 后端 localhost:7892
+```
+
+## 📖 使用流程
+
+打开页面后进入导入面板，选择输入源（小说文本或聊天记录），上传文件后系统自动分块。选择任务类型（角色提取/分卷总结/角色日记），点击开始。处理完成后到数据库面板查看和编辑提取的角色数据，到结果面板查看总结和日记。最后在世界书导出区域选择要导出的数据表和结果，设置参数后下载 JSON 文件，导入 SillyTavern 即可使用。
+
+## ⚙️ API 模式说明
+
+设置页面提供三种 API 模式。「预设 API」使用部署时通过环境变量配置的 API，Key 不暴露给前端。「后端代理」可填写任意 OpenAI 兼容 API 的地址和 Key，请求经后端转发避免 CORS 问题。「直连」适用于本地部署的 Ollama 等不存在 CORS 限制的模型。
 
 ## 🛠️ 技术栈
 
-- React + TypeScript
-- Vite
-- Tailwind CSS
-- shadcn/ui
-- Zustand 状态管理
-
-## 📝 使用说明
-
-### 导入小说
-在「导入」面板中上传或粘贴小说文本，设置拆分字符数。
-
-### 配置提示词
-在「设置」中配置API密钥和提示词模板，用于AI生成角色信息。
-
-### 查看与编辑
-在「数据库」面板中查看和编辑生成的各类表格数据。
-
-### 导出世界书
-在「合并」面板中选择需要导出的数据，生成最终的世界书文件。
+- **前端**：React 18 + TypeScript + Vite + Tailwind + shadcn/ui
+- **后端代理**：Python FastAPI + httpx
+- **持久化**：Zustand + IndexedDB
+- **部署**：Docker 多阶段构建
 
 ## 📜 更新记录
 
@@ -68,4 +79,4 @@
 
 ## 📄 License
 
-MIT License
+MIT
