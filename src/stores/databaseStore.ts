@@ -694,6 +694,8 @@ export const useDatabaseStore = create<DatabaseState>()(
       },
       profiles: {},
       importChunks: [],
+      diaryResults: [],
+      summaryResults: [],
       currentSheetKey: 'sheet_global',
       isEditing: false,
       isUpdating: false,
