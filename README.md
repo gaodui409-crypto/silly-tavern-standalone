@@ -62,6 +62,10 @@
 ### 导出世界书
 在「合并」面板中选择需要导出的数据，生成最终的世界书文件。
 
+## 📜 更新记录
+
+详见 [CHANGELOG.md](./CHANGELOG.md)
+
 ## 📄 License
 
 MIT License
