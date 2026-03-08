@@ -3,7 +3,7 @@
  * 负责调用 AI 接口解析小说文本中的角色信息
  */
 
-import type { ApiConfig } from '@/types/database';
+import { callAI } from '@/lib/apiProxy';
 
 export const DEFAULT_EXTRACTION_PROMPT = `你是一个小说分析助手。请仔细阅读以下小说文本片段，提取其中出现的角色信息。
 
@@ -113,20 +113,17 @@ export function extractKnownCharacters(
     characterNames: [],
   };
 
-  // 从主角表提取（跳过表头）
   if (protagonistContent.length > 1) {
     const lastRow = protagonistContent[protagonistContent.length - 1];
     result.protagonistName = (lastRow[1] as string) || null;
     result.protagonistStage = (lastRow[2] as string) || null;
   }
 
-  // 从人物表提取（跳过表头）
   for (let i = 1; i < charactersContent.length; i++) {
     const row = charactersContent[i];
     const name = (row[1] as string) || '';
     const relationship = (row[5] as string) || '未知';
     if (name) {
-      // 去重
       if (!result.characterNames.find(c => c.name === name)) {
         result.characterNames.push({ name, relationship });
       }
@@ -137,18 +134,16 @@ export function extractKnownCharacters(
 }
 
 /**
- * 从 AI 响应中提取 JSON（处理可能的 markdown 代码块包裹）
+ * 从 AI 响应中提取 JSON
  */
 export function parseExtractionResponse(responseText: string): ExtractionResult | null {
   let text = responseText.trim();
   
-  // 移除 markdown 代码块
   const jsonBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
   if (jsonBlockMatch) {
     text = jsonBlockMatch[1].trim();
   }
   
-  // 尝试找到第一个 { 和最后一个 }
   const firstBrace = text.indexOf('{');
   const lastBrace = text.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -168,57 +163,24 @@ export function parseExtractionResponse(responseText: string): ExtractionResult 
 }
 
 /**
- * 调用 AI 接口进行角色提取
+ * 调用 AI 接口进行角色提取（通过统一 callAI）
  */
 export async function callExtractionAPI(
   content: string,
   promptTemplate: string,
   knownSuffix: string,
-  apiConfig: ApiConfig,
   chunkIndex: number,
   signal?: AbortSignal
 ): Promise<string> {
-  const apiUrl = apiConfig.url;
-  const apiKey = apiConfig.apiKey;
-  const model = apiConfig.model;
-  const corsProxy = apiConfig.corsProxy || '';
-
-  if (!apiUrl || !apiKey) {
-    throw new Error('请先配置 API 地址和密钥');
-  }
-
   const finalPrompt = promptTemplate.replace('$CONTENT', content) + knownSuffix;
-  const baseUrl = `${apiUrl}/chat/completions`;
-  const requestUrl = corsProxy ? `${corsProxy}${encodeURIComponent(baseUrl)}` : baseUrl;
 
   console.log(`[AIExtractor] 分块 ${chunkIndex} - 开始提取，内容长度: ${content.length}`);
 
-  const response = await fetch(requestUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: finalPrompt }],
-      max_tokens: apiConfig.maxTokens || 4000,
-      temperature: 0.3, // 低温度以获得更稳定的结构化输出
-    }),
+  const result = await callAI({
+    messages: [{ role: 'user', content: finalPrompt }],
+    temperature: 0.3,
     signal,
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API 错误 ${response.status}: ${errorText.substring(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const result = data.choices?.[0]?.message?.content;
-  
-  if (!result) {
-    throw new Error('AI 未返回有效内容');
-  }
 
   console.log(`[AIExtractor] 分块 ${chunkIndex} - 提取完成，响应长度: ${result.length}`);
   return result;
@@ -229,7 +191,7 @@ export async function callExtractionAPI(
  */
 export class ConcurrentQueue<T> {
   private running = 0;
-  private results: Map<number, T> = new Map();
+  private results: Map<number, T | null> = new Map();
   private nextWriteIndex = 0;
   private _isPaused = false;
   private _isAborted = false;
@@ -246,6 +208,7 @@ export class ConcurrentQueue<T> {
 
   get isPaused() { return this._isPaused; }
   get isAborted() { return this._isAborted; }
+  get signal() { return this.abortController.signal; }
 
   pause() { this._isPaused = true; }
   resume() { this._isPaused = false; }
@@ -276,21 +239,19 @@ export class ConcurrentQueue<T> {
         completed++;
         
         // 按顺序写入
-        while (this.results.has(this.nextWriteIndex)) {
-          const r = this.results.get(this.nextWriteIndex)!;
-          this.onResult(this.nextWriteIndex, r);
-          this.results.delete(this.nextWriteIndex);
-          this.nextWriteIndex++;
-        }
+        this._flushResults();
         
         this.onProgress(completed, total);
       } catch (error: any) {
         if (!this._isAborted) {
           completed++;
+          this.results.set(currentIndex, null);
           this.onError(currentIndex, error);
+
+          // 按顺序写入（跳过 null）
+          this._flushResults();
+          
           this.onProgress(completed, total);
-          // Skip this index for write ordering
-          this.nextWriteIndex = Math.max(this.nextWriteIndex, currentIndex + 1);
         }
       } finally {
         this.running--;
@@ -301,12 +262,22 @@ export class ConcurrentQueue<T> {
       }
     };
 
-    // Start N concurrent workers
     const workers = Array.from(
       { length: Math.min(this.concurrency, total) },
       () => executeNext()
     );
     
     await Promise.all(workers);
+  }
+
+  private _flushResults() {
+    while (this.results.has(this.nextWriteIndex)) {
+      const r = this.results.get(this.nextWriteIndex);
+      if (r !== null && r !== undefined) {
+        this.onResult(this.nextWriteIndex, r);
+      }
+      this.results.delete(this.nextWriteIndex);
+      this.nextWriteIndex++;
+    }
   }
 }

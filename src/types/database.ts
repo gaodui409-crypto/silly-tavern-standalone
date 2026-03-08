@@ -1,5 +1,15 @@
 // 数据库核心类型定义
 
+export type InputSourceType = 'novel' | 'chat';
+export type TaskType = 'extraction' | 'summary' | 'diary';
+
+export interface ChatMeta {
+  userName: string;
+  charName: string;
+  messageCount: number;
+  totalChars: number;
+}
+
 export interface TableColumn {
   id: string;
   name: string;
@@ -61,7 +71,6 @@ export interface ApiConfig {
   useMainApi: boolean;
   maxTokens: number;
   temperature: number;
-  corsProxy?: string;
 }
 
 export interface PromptSegment {
@@ -122,7 +131,7 @@ export interface MergeSettings {
 
 export interface AppSettings {
   apiConfig: ApiConfig;
-  apiMode: 'custom' | 'tavern';
+  apiMode: 'proxy' | 'preset' | 'direct';
   tavernProfile: string;
   charCardPrompt: PromptSegment[];
   autoUpdateThreshold: number;
@@ -144,6 +153,15 @@ export interface AppSettings {
   mergeSettings: MergeSettings;
   extractionPrompt: string;
   extractionConcurrency: number;
+  // Diary / chat features
+  inputSourceType: InputSourceType;
+  taskType: TaskType;
+  chatMeta: ChatMeta | null;
+  diaryPrompt: string;
+  diaryStyle: string;
+  diaryNsfw: boolean;
+  chatSegmentSize: number;
+  chatOverlap: number;
 }
 
 export interface IsolationProfile {

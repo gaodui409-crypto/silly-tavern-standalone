@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { indexedDBStorage, clearAllStoredData } from '@/lib/indexedDBStorage';
 import { DEFAULT_EXTRACTION_PROMPT } from '@/lib/aiExtractor';
+import { DEFAULT_DIARY_PROMPT } from '@/lib/diaryApi';
 import type { 
   DatabaseData, 
   TableSheet, 
@@ -302,9 +303,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     useMainApi: true,
     maxTokens: 60000,
     temperature: 0.9,
-    corsProxy: 'https://corsproxy.io/?',
   },
-  apiMode: 'custom',
+  apiMode: 'preset',
   tavernProfile: '',
   charCardPrompt: DEFAULT_CHAR_CARD_PROMPT,
   autoUpdateThreshold: 3,
@@ -326,6 +326,14 @@ const DEFAULT_SETTINGS: AppSettings = {
   mergeSettings: DEFAULT_MERGE_SETTINGS,
   extractionPrompt: DEFAULT_EXTRACTION_PROMPT,
   extractionConcurrency: 3,
+  inputSourceType: 'novel',
+  taskType: 'extraction',
+  chatMeta: null,
+  diaryPrompt: DEFAULT_DIARY_PROMPT,
+  diaryStyle: 'daily',
+  diaryNsfw: true,
+  chatSegmentSize: 50,
+  chatOverlap: 5,
 };
 
 // 默认表格模板 - 与原版SillyTavern插件完全一致
@@ -636,6 +644,8 @@ interface DatabaseState {
   globalMeta: GlobalMeta;
   profiles: Record<string, IsolationProfile>;
   importChunks: string[];
+  diaryResults: string[];
+  summaryResults: string[];
   
   // UI 状态
   currentSheetKey: string | null;
@@ -667,6 +677,8 @@ interface DatabaseState {
   setIsUpdating: (value: boolean) => void;
   setUpdateProgress: (value: number) => void;
   setImportChunks: (chunks: string[]) => void;
+  setDiaryResults: (results: string[]) => void;
+  setSummaryResults: (results: string[]) => void;
   clearAllData: () => Promise<void>;
 }
 
@@ -682,6 +694,8 @@ export const useDatabaseStore = create<DatabaseState>()(
       },
       profiles: {},
       importChunks: [],
+      diaryResults: [],
+      summaryResults: [],
       currentSheetKey: 'sheet_global',
       isEditing: false,
       isUpdating: false,
@@ -933,6 +947,8 @@ export const useDatabaseStore = create<DatabaseState>()(
       setIsUpdating: (value) => set({ isUpdating: value }),
       setUpdateProgress: (value) => set({ updateProgress: value }),
       setImportChunks: (chunks) => set({ importChunks: chunks }),
+      setDiaryResults: (results) => set({ diaryResults: results }),
+      setSummaryResults: (results) => set({ summaryResults: results }),
       clearAllData: async () => {
         await clearAllStoredData();
         set({
@@ -941,6 +957,8 @@ export const useDatabaseStore = create<DatabaseState>()(
           globalMeta: { version: 1, activeIsolationCode: '', isolationCodeList: [] },
           profiles: {},
           importChunks: [],
+          diaryResults: [],
+          summaryResults: [],
           currentSheetKey: 'sheet_global',
         });
       },
@@ -954,6 +972,8 @@ export const useDatabaseStore = create<DatabaseState>()(
         globalMeta: state.globalMeta,
         profiles: state.profiles,
         importChunks: state.importChunks,
+        diaryResults: state.diaryResults,
+        summaryResults: state.summaryResults,
       }),
     }
   )

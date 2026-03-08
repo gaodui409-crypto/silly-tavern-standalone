@@ -6,13 +6,11 @@ import {
   Settings, 
   FileUp, 
   Sparkles, 
-  Layers,
   ChevronUp,
   ChevronDown,
   Trash2,
   Plus,
   BookOpen,
-  Merge,
   Cog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -38,15 +36,13 @@ interface SidebarProps {
   onTabChange: (tab: string) => void;
 }
 
-// 按使用流程排序的主菜单
 const workflowItems = [
-  { id: 'import', label: '① 导入文本', icon: FileUp, description: '加载小说' },
-  { id: 'database', label: '② 数据库', icon: Database, description: '查看数据' },
-  { id: 'plot', label: '③ 剧情推进', icon: Sparkles, description: '继续创作' },
-  { id: 'merge', label: '④ 总结 & 导出', icon: Merge, description: '整理输出' },
+  { id: 'import', label: '📥 导入', icon: FileUp, description: '加载文本' },
+  { id: 'database', label: '📊 数据库', icon: Database, description: '查看数据' },
+  { id: 'plot', label: '✨ 剧情推进', icon: Sparkles, description: '继续创作' },
+  { id: 'merge', label: '📖 结果', icon: BookOpen, description: '总结+日记+导出' },
 ];
 
-// 设置类菜单
 const settingsItems = [
   { id: 'settings', label: 'API设置', icon: Cog },
   { id: 'prompts', label: '提示词', icon: BookOpen },
@@ -99,66 +95,40 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       {/* Workflow Navigation */}
       <nav className="p-2">
         <div className="px-3 py-1.5 mb-1">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            工作流程
-          </span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">工作流程</span>
         </div>
         {workflowItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          
           return (
-            <motion.button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-all",
-                isActive 
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              )}
-              whileHover={{ x: 4 }}
-              whileTap={{ scale: 0.98 }}
-            >
+            <motion.button key={item.id} onClick={() => onTabChange(item.id)}
+              className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-all",
+                isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}
+              whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
               <Icon className={cn("w-4 h-4", isActive && "text-primary")} />
               <span className="text-sm font-medium">{item.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="activeIndicator"
-                  className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
-                />
-              )}
+              {isActive && <motion.div layoutId="activeIndicator" className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
             </motion.button>
           );
         })}
       </nav>
 
-      {/* Divider */}
       <div className="divider-gradient mx-4 my-2" />
 
-      {/* Tables List - Only show when database tab is active or always visible */}
+      {/* Tables List */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="px-4 py-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            数据表
-          </span>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">数据表</span>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6"><Plus className="w-3.5 h-3.5" /></Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>新建表格</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>新建表格</DialogTitle></DialogHeader>
               <div className="flex gap-2 mt-4">
-                <Input
-                  placeholder="表格名称"
-                  value={newTableName}
+                <Input placeholder="表格名称" value={newTableName}
                   onChange={(e) => setNewTableName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddTable()}
-                />
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddTable()} />
                 <Button onClick={handleAddTable}>创建</Button>
               </div>
             </DialogContent>
@@ -171,66 +141,23 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               const isActive = sheet.key === currentSheetKey && activeTab === 'database';
               const isFirst = index === 0;
               const isLast = index === sortedSheets.length - 1;
-
               return (
-                <motion.div
-                  key={sheet.key}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className={cn(
-                    "group flex items-center gap-2 px-3 py-2 rounded-lg mb-1 cursor-pointer transition-all",
-                    isActive 
-                      ? "bg-primary/10 border border-primary/30" 
-                      : "hover:bg-sidebar-accent/50"
-                  )}
-                  onClick={() => {
-                    setCurrentSheet(sheet.key);
-                    onTabChange('database');
-                  }}
-                >
-                  <Table2 className={cn(
-                    "w-4 h-4 shrink-0",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  <span className={cn(
-                    "flex-1 text-sm truncate",
-                    isActive ? "text-primary font-medium" : "text-sidebar-foreground"
-                  )}>
-                    {sheet.name}
-                  </span>
-                  
-                  {/* Actions */}
+                <motion.div key={sheet.key}
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}
+                  className={cn("group flex items-center gap-2 px-3 py-2 rounded-lg mb-1 cursor-pointer transition-all",
+                    isActive ? "bg-primary/10 border border-primary/30" : "hover:bg-sidebar-accent/50")}
+                  onClick={() => { setCurrentSheet(sheet.key); onTabChange('database'); }}>
+                  <Table2 className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                  <span className={cn("flex-1 text-sm truncate", isActive ? "text-primary font-medium" : "text-sidebar-foreground")}>{sheet.name}</span>
                   <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        moveSheet(sheet.key, 'up');
-                      }}
-                      disabled={isFirst}
-                      className="p-1 hover:bg-white/10 rounded disabled:opacity-30"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); moveSheet(sheet.key, 'up'); }} disabled={isFirst} className="p-1 hover:bg-white/10 rounded disabled:opacity-30">
                       <ChevronUp className="w-3 h-3" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        moveSheet(sheet.key, 'down');
-                      }}
-                      disabled={isLast}
-                      className="p-1 hover:bg-white/10 rounded disabled:opacity-30"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); moveSheet(sheet.key, 'down'); }} disabled={isLast} className="p-1 hover:bg-white/10 rounded disabled:opacity-30">
                       <ChevronDown className="w-3 h-3" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`确定删除表格 "${sheet.name}"?`)) {
-                          deleteSheet(sheet.key);
-                        }
-                      }}
-                      className="p-1 hover:bg-destructive/20 hover:text-destructive rounded"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); if (confirm(`确定删除表格 "${sheet.name}"?`)) deleteSheet(sheet.key); }}
+                      className="p-1 hover:bg-destructive/20 hover:text-destructive rounded">
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
@@ -245,21 +172,11 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       <div className="border-t border-sidebar-border">
         <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
           <CollapsibleTrigger asChild>
-            <button className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 transition-all",
-              isSettingsActive 
-                ? "bg-sidebar-accent/50" 
-                : "hover:bg-sidebar-accent/30"
-            )}>
-              <Settings className={cn(
-                "w-4 h-4",
-                isSettingsActive && "text-primary"
-              )} />
-              <span className="text-sm font-medium">设置</span>
-              <motion.div
-                animate={{ rotate: isSettingsOpen ? 180 : 0 }}
-                className="ml-auto"
-              >
+            <button className={cn("w-full flex items-center gap-3 px-4 py-3 transition-all",
+              isSettingsActive ? "bg-sidebar-accent/50" : "hover:bg-sidebar-accent/30")}>
+              <Settings className={cn("w-4 h-4", isSettingsActive && "text-primary")} />
+              <span className="text-sm font-medium">⚙️ 设置</span>
+              <motion.div animate={{ rotate: isSettingsOpen ? 180 : 0 }} className="ml-auto">
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
               </motion.div>
             </button>
@@ -269,20 +186,11 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               {settingsItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
-                
                 return (
-                  <motion.button
-                    key={item.id}
-                    onClick={() => onTabChange(item.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-all",
-                      isActive 
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                    )}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
+                  <motion.button key={item.id} onClick={() => onTabChange(item.id)}
+                    className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-all",
+                      isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50")}
+                    whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
                     <Icon className={cn("w-4 h-4", isActive && "text-primary")} />
                     <span className="text-sm">{item.label}</span>
                   </motion.button>
@@ -293,11 +201,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         </Collapsible>
       </div>
 
-      {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
-        <div className="text-xs text-muted-foreground text-center">
-          独立版 v1.0
-        </div>
+        <div className="text-xs text-muted-foreground text-center">独立版 v1.1</div>
       </div>
     </div>
   );
