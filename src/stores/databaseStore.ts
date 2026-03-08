@@ -326,6 +326,14 @@ const DEFAULT_SETTINGS: AppSettings = {
   mergeSettings: DEFAULT_MERGE_SETTINGS,
   extractionPrompt: DEFAULT_EXTRACTION_PROMPT,
   extractionConcurrency: 3,
+  inputSourceType: 'novel',
+  taskType: 'extraction',
+  chatMeta: null,
+  diaryPrompt: DEFAULT_DIARY_PROMPT,
+  diaryStyle: 'daily',
+  diaryNsfw: true,
+  chatSegmentSize: 50,
+  chatOverlap: 5,
 };
 
 // 默认表格模板 - 与原版SillyTavern插件完全一致
