@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { indexedDBStorage, clearAllStoredData } from '@/lib/indexedDBStorage';
 import { DEFAULT_EXTRACTION_PROMPT } from '@/lib/aiExtractor';
+import { DEFAULT_DIARY_PROMPT } from '@/lib/diaryApi';
 import type { 
   DatabaseData, 
   TableSheet, 
