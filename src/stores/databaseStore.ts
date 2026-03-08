@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { indexedDBStorage, clearAllStoredData } from '@/lib/indexedDBStorage';
+import { DEFAULT_EXTRACTION_PROMPT } from '@/lib/aiExtractor';
 import type { 
   DatabaseData, 
   TableSheet, 
