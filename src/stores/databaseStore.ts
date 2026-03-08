@@ -947,6 +947,8 @@ export const useDatabaseStore = create<DatabaseState>()(
       setIsUpdating: (value) => set({ isUpdating: value }),
       setUpdateProgress: (value) => set({ updateProgress: value }),
       setImportChunks: (chunks) => set({ importChunks: chunks }),
+      setDiaryResults: (results) => set({ diaryResults: results }),
+      setSummaryResults: (results) => set({ summaryResults: results }),
       clearAllData: async () => {
         await clearAllStoredData();
         set({
@@ -955,6 +957,8 @@ export const useDatabaseStore = create<DatabaseState>()(
           globalMeta: { version: 1, activeIsolationCode: '', isolationCodeList: [] },
           profiles: {},
           importChunks: [],
+          diaryResults: [],
+          summaryResults: [],
           currentSheetKey: 'sheet_global',
         });
       },
@@ -968,6 +972,8 @@ export const useDatabaseStore = create<DatabaseState>()(
         globalMeta: state.globalMeta,
         profiles: state.profiles,
         importChunks: state.importChunks,
+        diaryResults: state.diaryResults,
+        summaryResults: state.summaryResults,
       }),
     }
   )
