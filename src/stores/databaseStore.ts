@@ -933,14 +933,27 @@ export const useDatabaseStore = create<DatabaseState>()(
       setIsUpdating: (value) => set({ isUpdating: value }),
       setUpdateProgress: (value) => set({ updateProgress: value }),
       setImportChunks: (chunks) => set({ importChunks: chunks }),
+      clearAllData: async () => {
+        await clearAllStoredData();
+        set({
+          database: JSON.parse(JSON.stringify(DEFAULT_TABLE_TEMPLATE)),
+          settings: { ...DEFAULT_SETTINGS },
+          globalMeta: { version: 1, activeIsolationCode: '', isolationCodeList: [] },
+          profiles: {},
+          importChunks: [],
+          currentSheetKey: 'sheet_global',
+        });
+      },
     }),
     {
       name: 'tavern-db-storage',
+      storage: createJSONStorage(() => indexedDBStorage),
       partialize: (state) => ({
         database: state.database,
         settings: state.settings,
         globalMeta: state.globalMeta,
         profiles: state.profiles,
+        importChunks: state.importChunks,
       }),
     }
   )

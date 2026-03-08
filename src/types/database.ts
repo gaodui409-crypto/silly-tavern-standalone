@@ -142,6 +142,8 @@ export interface AppSettings {
   dataIsolationCode: string;
   worldbookConfig: WorldbookConfig;
   mergeSettings: MergeSettings;
+  extractionPrompt: string;
+  extractionConcurrency: number;
 }
 
 export interface IsolationProfile {
