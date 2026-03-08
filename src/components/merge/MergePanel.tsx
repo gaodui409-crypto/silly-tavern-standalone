@@ -6,7 +6,6 @@ import {
   Pause, 
   RotateCcw,
   Settings2,
-  Hash,
   Save,
   Loader2,
   CheckCircle2
@@ -17,10 +16,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { WorldbookExport } from './WorldbookExport';
 
 const DEFAULT_SUMMARY_PROMPT = `<|no-trans|>执行总结任务
 
@@ -98,17 +97,12 @@ export function MergePanel() {
   const [summaryResults, setSummaryResults] = useState<string[]>([]);
   
   const mergeSettings = settings.mergeSettings;
-
-  // 获取已导入的分块数量
   const chunkCount = importChunks.length;
 
   const updateMergeSettings = (updates: Partial<typeof mergeSettings>) => {
-    setSettings({
-      mergeSettings: { ...mergeSettings, ...updates }
-    });
+    setSettings({ mergeSettings: { ...mergeSettings, ...updates } });
   };
 
-  // 内置测试API配置
   const TEST_API_URL = 'https://inference.canopywave.io/v1';
   const TEST_API_KEY = '-5RYFjlVZWcROssj25mj8CxHbj_1rNnNuSokMcorMiQ';
   const TEST_MODEL = 'moonshotai/kimi-k2.5';
@@ -124,88 +118,46 @@ export function MergePanel() {
 
     const baseUrl = `${apiUrl}/chat/completions`;
     const requestUrl = corsProxy ? `${corsProxy}${encodeURIComponent(baseUrl)}` : baseUrl;
-    
-    console.log(`[Summary API] 第${volumeIndex}卷 - 原始URL:`, baseUrl);
-    console.log(`[Summary API] 第${volumeIndex}卷 - CORS代理:`, corsProxy || '无');
-    console.log(`[Summary API] 第${volumeIndex}卷 - 最终URL:`, requestUrl);
-    console.log(`[Summary API] 第${volumeIndex}卷 - 使用模型:`, model);
-    console.log(`[Summary API] 第${volumeIndex}卷 - 内容长度:`, content.length);
 
-    try {
-      const response = await fetch(requestUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: 'user', content: finalPrompt }
-          ],
-          max_tokens: settings.apiConfig.maxTokens || 8000,
-          temperature: settings.apiConfig.temperature || 0.7,
-        }),
-      });
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model, messages: [{ role: 'user', content: finalPrompt }],
+        max_tokens: settings.apiConfig.maxTokens || 8000,
+        temperature: settings.apiConfig.temperature || 0.7,
+      }),
+    });
 
-      console.log(`[Summary API] 第${volumeIndex}卷 - 响应状态:`, response.status);
-
-      const responseText = await response.text();
-      console.log(`[Summary API] 第${volumeIndex}卷 - 响应长度:`, responseText.length);
-
-      if (!response.ok) {
-        console.error(`[Summary API] 第${volumeIndex}卷 - 错误响应:`, responseText.substring(0, 500));
-        throw new Error(`API调用失败: ${response.status} - ${responseText.substring(0, 200)}`);
-      }
-
-      const data = JSON.parse(responseText);
-      const result = data.choices?.[0]?.message?.content || `第${volumeIndex}卷总结生成失败`;
-      console.log(`[Summary API] 第${volumeIndex}卷 - 成功! 结果长度:`, result.length);
-      return result;
-    } catch (error: any) {
-      console.error(`[Summary API] 第${volumeIndex}卷 - 请求异常:`, error);
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API调用失败: ${response.status} - ${errorText.substring(0, 200)}`);
     }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || `第${volumeIndex}卷总结生成失败`;
   };
 
   const handleStartSummary = async () => {
-    if (chunkCount === 0) {
-      toast.error('没有可总结的分块数据，请先导入文本');
-      return;
-    }
+    if (chunkCount === 0) { toast.error('没有可总结的分块数据'); return; }
 
     const startIdx = mergeSettings.startIndex - 1;
     const endIdx = mergeSettings.endIndex ? mergeSettings.endIndex : chunkCount;
     const chunksToProcess = importChunks.slice(startIdx, endIdx);
-
-    if (chunksToProcess.length === 0) {
-      toast.error('选定范围内没有分块数据');
-      return;
-    }
-
-    const apiUrl = settings.apiConfig.url || TEST_API_URL;
-    const isUsingTestApi = !settings.apiConfig.url;
-
-    if (!confirm(`即将开始分卷总结。\n\n待处理: ${chunksToProcess.length} 个分块\n范围: 第 ${startIdx + 1} 到第 ${endIdx} 块\nAPI: ${isUsingTestApi ? '测试API' : apiUrl}\n\n此操作将调用AI生成段落式总结。`)) {
-      return;
-    }
+    if (chunksToProcess.length === 0) { toast.error('选定范围内没有分块数据'); return; }
 
     setIsSummarizing(true);
     setSummaryProgress(0);
     setSummaryResults([]);
-    toast.info('开始分卷总结...');
 
     const results: string[] = [];
     for (let i = 0; i < chunksToProcess.length; i++) {
       try {
         setSummaryProgress(((i + 0.5) / chunksToProcess.length) * 100);
-        
         const summary = await callSummaryAPI(chunksToProcess[i], startIdx + i + 1);
         results.push(summary);
-        
         setSummaryProgress(((i + 1) / chunksToProcess.length) * 100);
         setSummaryResults([...results]);
-        
         toast.success(`第 ${startIdx + i + 1} 卷总结完成`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : '未知错误';
@@ -214,21 +166,16 @@ export function MergePanel() {
         setSummaryResults([...results]);
       }
     }
-
     setIsSummarizing(false);
     toast.success('分卷总结完成！');
-  };
-
-  const handleSave = () => {
-    toast.success('合并设置已保存');
   };
 
   return (
     <div className="flex-1 p-6 overflow-auto">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">分卷总结</h1>
-          <p className="text-muted-foreground">对分块文本生成段落式分卷总结，包含剧情概要与角色图鉴</p>
+          <h1 className="text-3xl font-bold mb-2">④ 分卷总结 & 世界书导出</h1>
+          <p className="text-muted-foreground">生成分卷总结，导出为 SillyTavern 世界书格式</p>
         </div>
 
         <div className="space-y-6">
@@ -255,54 +202,36 @@ export function MergePanel() {
                 <Settings2 className="w-5 h-5 text-primary" />
                 总结参数
               </CardTitle>
-              <CardDescription>配置分卷总结的范围和行为</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>起始分块</Label>
-                  <Input
-                    type="number"
-                    value={mergeSettings.startIndex}
-                    onChange={(e) => updateMergeSettings({ 
-                      startIndex: parseInt(e.target.value) || 1 
-                    })}
-                    min={1}
-                    max={chunkCount || 1}
-                  />
-                  <p className="text-xs text-muted-foreground">从第几个分块开始总结</p>
+                  <Input type="number" value={mergeSettings.startIndex}
+                    onChange={(e) => updateMergeSettings({ startIndex: parseInt(e.target.value) || 1 })}
+                    min={1} max={chunkCount || 1} />
                 </div>
                 <div className="space-y-2">
                   <Label>终止分块</Label>
-                  <Input
-                    type="number"
+                  <Input type="number"
                     value={mergeSettings.endIndex || ''}
-                    onChange={(e) => updateMergeSettings({ 
-                      endIndex: e.target.value ? parseInt(e.target.value) : null 
-                    })}
-                    placeholder={`留空 = 到最后 (${chunkCount})`}
-                    max={chunkCount || undefined}
-                  />
-                  <p className="text-xs text-muted-foreground">总结到第几个分块结束</p>
+                    onChange={(e) => updateMergeSettings({ endIndex: e.target.value ? parseInt(e.target.value) : null })}
+                    placeholder={`留空 = 到最后 (${chunkCount})`} />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label>分卷总结提示词模板</Label>
                 <Textarea
                   value={mergeSettings.promptTemplate || DEFAULT_SUMMARY_PROMPT}
                   onChange={(e) => updateMergeSettings({ promptTemplate: e.target.value })}
-                  placeholder={DEFAULT_SUMMARY_PROMPT}
-                  className="min-h-[300px] font-mono text-sm"
+                  className="min-h-[200px] font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">
-                  占位符: $CONTENT (待总结的分块文本内容)
-                </p>
+                <p className="text-xs text-muted-foreground">占位符: $CONTENT (待总结的分块文本内容)</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Manual Summary Control */}
+          {/* Summary Control */}
           <Card className="card-hover">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -319,48 +248,19 @@ export function MergePanel() {
                   </div>
                   <Progress value={summaryProgress} className="h-2" />
                   <div className="flex items-center gap-2 text-sm text-primary">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    正在生成分卷总结...
+                    <Loader2 className="w-4 h-4 animate-spin" />正在生成分卷总结...
                   </div>
                 </div>
               )}
-
               <div className="flex gap-4">
-                <Button
-                  onClick={handleStartSummary}
-                  disabled={isSummarizing || chunkCount === 0}
-                  className="flex-1 glow-primary"
-                >
-                  {isSummarizing ? (
-                    <>
-                      <Pause className="w-4 h-4 mr-2" />
-                      正在生成...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      开始总结
-                    </>
-                  )}
+                <Button onClick={handleStartSummary} disabled={isSummarizing || chunkCount === 0} className="flex-1 glow-primary">
+                  {isSummarizing ? (<><Pause className="w-4 h-4 mr-2" />正在生成...</>) : (<><Play className="w-4 h-4 mr-2" />开始总结</>)}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSummaryProgress(0);
-                    setSummaryResults([]);
-                  }}
-                  disabled={isSummarizing}
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  清空
+                <Button variant="outline" onClick={() => { setSummaryProgress(0); setSummaryResults([]); }} disabled={isSummarizing}>
+                  <RotateCcw className="w-4 h-4 mr-2" />清空
                 </Button>
               </div>
-
-              {chunkCount === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-2">
-                  请先在「导入文本」页面加载并分块文本
-                </p>
-              )}
+              {chunkCount === 0 && <p className="text-sm text-muted-foreground text-center py-2">请先在「导入文本」页面加载并分块文本</p>}
             </CardContent>
           </Card>
 
@@ -377,13 +277,8 @@ export function MergePanel() {
               <CardContent>
                 <div className="space-y-6 max-h-[500px] overflow-auto">
                   {summaryResults.map((result, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="p-4 rounded-lg bg-muted/50 border prose prose-sm dark:prose-invert max-w-none"
-                    >
+                    <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-lg bg-muted/50 border prose prose-sm dark:prose-invert max-w-none">
                       <pre className="whitespace-pre-wrap text-sm font-sans">{result}</pre>
                     </motion.div>
                   ))}
@@ -391,13 +286,14 @@ export function MergePanel() {
               </CardContent>
             </Card>
           )}
+
+          {/* Worldbook Export */}
+          <WorldbookExport />
         </div>
 
-        {/* Save Button */}
         <div className="flex justify-end mt-8">
-          <Button onClick={handleSave} className="glow-primary">
-            <Save className="w-4 h-4 mr-2" />
-            保存设置
+          <Button onClick={() => toast.success('设置已保存')} className="glow-primary">
+            <Save className="w-4 h-4 mr-2" />保存设置
           </Button>
         </div>
       </div>
