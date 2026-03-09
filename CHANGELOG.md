@@ -1,5 +1,14 @@
 # 更新记录
 
+## v2.0.1 (2026-03-09)
+
+### 云平台部署适配
+
+- 新增 zeabur.json、render.yaml、railway.json 配置文件，支持 Zeabur / Railway / Render 一键部署
+- Dockerfile EXPOSE 改为 `$PORT`，适配云平台动态端口
+- docker-compose.yml 环境变量改为 `${VAR:-default}` 格式，支持 `.env` 文件覆盖
+- README 部署方式新增「一键云部署」章节
+
 ## v2.0.0 (2026-03-08)
 
 ### 安全修复
