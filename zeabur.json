@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.zeabur.com/project.json",
+  "build": {
+    "type": "dockerfile"
+  }
+}

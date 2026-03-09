@@ -31,6 +31,6 @@ COPY --from=frontend-builder /app/dist ./dist
 ENV PORT=7892
 ENV STATIC_DIR=./dist
 
-EXPOSE 7892
+EXPOSE $PORT
 
 CMD ["python", "main.py"]

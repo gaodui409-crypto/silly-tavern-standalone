@@ -14,7 +14,17 @@
 
 ## 🚀 部署方式
 
-### 方式一：Docker（推荐）
+### 方式一：一键云部署
+
+| 平台 | 一键部署说明 |
+|------|------------|
+| Zeabur | 连接 GitHub 仓库，自动构建 |
+| Railway | 需替换模板 ID |
+| Render | 使用 render.yaml，Fork 后在 Render 导入仓库 |
+
+部署后在平台的环境变量设置中填入 `TEST_API_URL`、`TEST_API_KEY`、`TEST_MODEL`。
+
+### 方式二：Docker（推荐）
 
 ```bash
 docker run -d --name taverndb -p 7892:7892 \
@@ -27,7 +37,7 @@ docker run -d --name taverndb -p 7892:7892 \
 
 打开 `http://IP:7892`，在设置中选择"预设 API"模式即可使用。
 
-### 方式二：Docker Compose
+### 方式三：Docker Compose
 
 ```yaml
 version: "3.8"
@@ -44,7 +54,7 @@ services:
     restart: unless-stopped
 ```
 
-### 方式三：本地开发
+### 方式四：本地开发
 
 ```bash
 git clone https://github.com/gaodui409-crypto/silly-tavern-standalone.git
